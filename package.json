@@ -1,0 +1,9 @@
+{
+  "name": "measurestack-leadgen",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --check public/app.js && node --check functions/api/lead.js && node --test"
+  }
+}
