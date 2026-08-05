@@ -19,15 +19,41 @@
     return missing;
   }
 
+  async function copyValue(button) {
+    const value = button.dataset.copyValue || '';
+    const original = button.textContent;
+    try {
+      await navigator.clipboard.writeText(value);
+      button.textContent = 'Copied';
+      window.MeasureStack.track('test_payment_detail_copy', {
+        payment_field: button.dataset.copyField || 'unknown',
+      });
+    } catch {
+      const input = document.createElement('textarea');
+      input.value = value;
+      input.setAttribute('readonly', '');
+      input.style.position = 'fixed';
+      input.style.opacity = '0';
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      input.remove();
+      button.textContent = 'Copied';
+    }
+    setTimeout(() => { button.textContent = original; }, 1400);
+  }
+
   async function initialize() {
     const config = await window.MeasureStack.ready;
+    await window.MeasureStack.identityReady;
     const { clerk } = await window.MeasureStack.loadClerk();
 
     window.MeasureStack.track('view_pricing', {
       currency: 'USD',
       plans_shown: 'starter,growth,scale',
       stripe_configured: Boolean(config.integrations?.stripe),
-      authentication_status: clerk?.isSignedIn ? 'authenticated' : 'anonymous'
+      authentication_status: clerk?.isSignedIn ? 'authenticated' : 'anonymous',
+      test_payment_guide_visible: true,
     });
 
     if (!config.integrations?.stripe) {
@@ -59,18 +85,11 @@
       plan_id: plan,
       plan_name: plan,
       currency: 'USD',
-      authentication_status: identityMode
+      authentication_status: identityMode,
     });
 
     if (plan === 'starter') {
-      if (clerk?.isSignedIn) {
-        location.href = '/app.html?plan=starter';
-      } else if (config.clerkPublishableKey) {
-        sessionStorage.setItem(pendingKey, 'starter');
-        location.href = `/sign-in.html?redirect_url=${encodeURIComponent('/app.html?plan=starter')}`;
-      } else {
-        location.href = '/#demo';
-      }
+      location.href = '/app.html?plan=starter';
       return;
     }
 
@@ -98,19 +117,32 @@
       plan_id: plan,
       person_id: tracking.person_id,
       analytics_user_id: tracking.analytics_user_id,
-      authentication_status: identityMode
+      authentication_status: identityMode,
+      items: [{
+        item_id: plan,
+        item_name: `${plan} subscription`,
+        price,
+        quantity: 1,
+      }],
     });
 
     try {
       const response = await window.MeasureStack.authFetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan, eventId, tracking })
+        body: JSON.stringify({ plan, eventId, tracking }),
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || `Checkout returned ${response.status}.`);
       if (!result.url) throw new Error('Stripe created no redirect URL. Check the configured Price IDs.');
       if (result.identity) window.MeasureStack.applyResolvedIdentity(result.identity);
+      window.MeasureStack.recordBilling?.({
+        event_id: eventId,
+        checkout_session_id: result.sessionId || '',
+        stripe_customer_id: result.identity?.stripe_customer_id || '',
+        payment_status: 'unpaid',
+        plan,
+      });
       location.assign(result.url);
     } catch (error) {
       setStatus(error.message);
@@ -120,7 +152,7 @@
         event_id: eventId,
         plan_id: plan,
         authentication_status: identityMode,
-        error_message: error.message.slice(0, 200)
+        error_message: error.message.slice(0, 200),
       });
     }
   }
@@ -130,8 +162,14 @@
     await startCheckout(button.dataset.plan, config);
   }));
 
+  document.querySelectorAll('[data-copy-value]').forEach((button) => {
+    button.addEventListener('click', () => copyValue(button));
+  });
+
   initialize().catch((error) => {
     setStatus(`Pricing initialization failed: ${error.message}`);
-    window.MeasureStack?.track?.('pricing_initialization_error', { error_message: error.message.slice(0, 200) });
+    window.MeasureStack?.track?.('pricing_initialization_error', {
+      error_message: error.message.slice(0, 200),
+    });
   });
 })();
