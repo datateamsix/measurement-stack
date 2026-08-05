@@ -1,8 +1,19 @@
 {
   "sourceBranch": "main",
-  "deploymentMarker": "2026-08-05T16:58:00Z",
-  "release": "guest-stripe-checkout-d1-binding",
-  "expectedClerkMode": "optional-enrichment",
-  "d1Binding": "DB",
-  "checkoutModes": ["anonymous", "authenticated"]
+  "deploymentMarker": "2026-08-05T17:25:00Z",
+  "release": "canonical-identity-graph-v1",
+  "identityGraphVersion": "1.0.0",
+  "dataLayerSchema": "measurement_stack.event@1.0.0",
+  "d1Migrations": ["0001_identity_resolution.sql", "0002_canonical_identity_graph.sql"],
+  "networkPolicy": {
+    "ip": "anonymize_strict",
+    "javascriptClientId": "first_party_uuid",
+    "rawIpInBrowser": false,
+    "rawUserAgentInDataLayer": false
+  },
+  "stripeTestCheckout": {
+    "guest": true,
+    "authenticated": true,
+    "returningCustomerReuse": true
+  }
 }
