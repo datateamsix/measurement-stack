@@ -1,0 +1,162 @@
+/* Identity graph and Stripe sandbox additions. */
+.test-payment-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr);
+  gap: 2rem;
+  align-items: start;
+  margin-top: 1.5rem;
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  border: 1px solid #d8dcf3;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top right, rgba(79, 70, 229, 0.12), transparent 42%),
+    #ffffff;
+  box-shadow: 0 22px 60px rgba(37, 26, 92, 0.10);
+}
+.test-payment-copy h2 {
+  margin: 0.4rem 0 0.75rem;
+  color: #17113f;
+  font-size: clamp(1.65rem, 3vw, 2.35rem);
+}
+.test-payment-copy p:last-child,
+.test-payment-help {
+  color: #626985;
+}
+.test-payment-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+.test-payment-grid > div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.3rem 0.75rem;
+  align-items: center;
+  padding: 1rem;
+  border: 1px solid #e0e3f4;
+  border-radius: 16px;
+  background: #f8f8ff;
+}
+.test-payment-grid span {
+  grid-column: 1 / -1;
+  color: #707691;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.test-payment-grid code {
+  color: #302061;
+  font-size: 0.98rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.test-payment-grid .text-button {
+  padding: 0;
+  white-space: nowrap;
+}
+.test-payment-help {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding-top: 0.35rem;
+  font-size: 0.92rem;
+}
+
+.graph-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+.graph-summary article {
+  padding: 1rem;
+  border: 1px solid #e0e3f2;
+  border-radius: 16px;
+  background: #f8f8ff;
+}
+.graph-summary span {
+  display: block;
+  color: #747a96;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.graph-summary strong {
+  display: block;
+  margin-top: 0.3rem;
+  color: #302061;
+  font-size: 1.45rem;
+}
+.graph-node-list {
+  display: grid;
+  gap: 0.7rem;
+}
+.graph-node {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.35fr) minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  border: 1px solid #e1e4f3;
+  border-radius: 14px;
+  background: #fafaff;
+}
+.graph-node strong {
+  color: #4032b5;
+}
+.graph-node code {
+  color: #302061;
+  overflow-wrap: anywhere;
+}
+.graph-node span {
+  color: #747a96;
+  font-size: 0.82rem;
+}
+.envelope-viewer {
+  max-height: 520px;
+  overflow: auto;
+  padding: 1rem;
+  border: 1px solid #dfe2f2;
+  border-radius: 16px;
+  color: #dfe5ff;
+  background: #121035;
+  font: 0.78rem/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.policy-list {
+  display: grid;
+  gap: 0.65rem;
+}
+.policy-list > div {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.55fr) minmax(0, 1fr);
+  gap: 1rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid #eceef8;
+}
+.policy-list dt {
+  color: #747a96;
+}
+.policy-list dd {
+  margin: 0;
+  color: #302061;
+  font-weight: 700;
+}
+.event-stream article small {
+  color: #8a90aa;
+  font-size: 0.72rem;
+}
+
+@media (max-width: 900px) {
+  .test-payment-panel { grid-template-columns: 1fr; }
+  .graph-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 620px) {
+  .test-payment-grid,
+  .graph-summary { grid-template-columns: 1fr; }
+  .graph-node { grid-template-columns: 1fr; }
+  .policy-list > div { grid-template-columns: 1fr; gap: 0.25rem; }
+}
