@@ -6,6 +6,8 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 STRIPE_GROWTH_PRICE_ID = "price_1U172MABkQitbRJZFiwrihDp"
 STRIPE_SCALE_PRICE_ID = "price_1U172vABkQitbRJZs8QGyEPN"
+IP_ANONYMIZATION_MODE = "anonymize_strict"
+JS_CLIENT_ID_MODE = "first_party_uuid"
 
 [[d1_databases]]
 binding = "DB"
