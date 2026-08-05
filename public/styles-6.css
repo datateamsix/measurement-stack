@@ -1,0 +1,223 @@
+/* Measurement Stack brand layer: purple/blue trust palette, approved logo, and consent dismissal fix. */
+:root {
+  --ink: #17133f;
+  --muted: #626985;
+  --forest: #17113f;
+  --forest-soft: #251a5c;
+  --mint: #4f6ff8;
+  --mint-bright: #6d5dfc;
+  --cream: #f4f5ff;
+  --line: #dde1f3;
+  --white: #ffffff;
+  --shadow: 0 30px 80px rgba(37, 26, 92, 0.16);
+}
+
+html { background: #f7f8ff; }
+body,
+.product-page,
+.auth-page,
+.workspace-page { color: var(--ink); background: #f7f8ff; }
+
+/* The author stylesheet previously overrode the native [hidden] behavior. */
+[hidden],
+.consent-banner[hidden],
+.form-success[hidden],
+.submit-error[hidden] { display: none !important; }
+
+/* Approved Measurement Stack logo applied without changing tracking namespaces. */
+.brand {
+  display: block;
+  width: clamp(214px, 18vw, 272px);
+  height: 46px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  background: url('/assets/measurement-stack-logo.svg?v=20260805d') left center / contain no-repeat;
+  font-size: 0;
+  line-height: 0;
+}
+.brand > * { display: none !important; }
+footer .brand {
+  width: 238px;
+  background-image: url('/assets/measurement-stack-logo-light.svg?v=20260805d');
+}
+
+.site-header {
+  min-height: 80px;
+  border-bottom-color: rgba(43, 27, 105, 0.10);
+  background: rgba(247, 248, 255, 0.90);
+}
+.site-header nav a { color: #646985; }
+.site-header nav a:hover,
+.nav-link { color: #2b1b69; }
+
+.eyebrow,
+.hero h1 em,
+.secondary-link,
+.feature-grid a,
+.feature-icon,
+.text-button,
+.plan-label { color: #4f46e5; }
+
+.announcement {
+  border-color: #dfe2f5;
+  color: #626985;
+  background: rgba(255, 255, 255, 0.94);
+}
+.announcement span,
+.popular-pill {
+  color: #ffffff;
+  background: linear-gradient(135deg, #6d28d9, #2563eb);
+}
+
+.primary-button,
+.nav-button {
+  color: #ffffff;
+  border-color: transparent;
+  background: linear-gradient(135deg, #5b21b6 0%, #4f46e5 52%, #2563eb 100%);
+  box-shadow: 0 12px 28px rgba(79, 70, 229, 0.28);
+}
+.primary-button:hover,
+.nav-button:hover {
+  color: #ffffff;
+  background: linear-gradient(135deg, #6d28d9 0%, #5b5ff3 52%, #3b82f6 100%);
+}
+.secondary-button {
+  color: #302061;
+  border-color: #aab2dd;
+  background: #ffffff;
+}
+
+.hero h1,
+.section-intro h2,
+.outcomes h2,
+.demo-copy h2,
+.form-heading h2,
+.workflow h2,
+.page-hero h1,
+.workspace-heading h1,
+.auth-copy h1,
+.checkout-result h1 { color: #17113f; }
+.hero-summary,
+.section-intro > p:last-child,
+.page-hero > p:not(.eyebrow),
+.auth-copy > p:not(.eyebrow),
+.workspace-heading p:not(.eyebrow),
+.checkout-result > p:not(.eyebrow) { color: #626985; }
+
+.hero-proof svg,
+.demo-copy li svg { stroke: #4f46e5; }
+
+.dashboard-shell {
+  border-color: rgba(139, 92, 246, 0.22);
+  background: #121035;
+  box-shadow: 0 34px 90px rgba(37, 26, 92, 0.30);
+}
+.dashboard-topbar { color: #e0e7ff; }
+.window-dots span { background: #504787; }
+.live-pill {
+  color: #bfdbfe;
+  background: rgba(59, 130, 246, 0.14);
+}
+.dashboard-card { color: #e7e9ff; background: #201b52; }
+.metric-card span,
+.card-heading { color: #b9bce1; }
+.metric-card small { color: #93c5fd; }
+.bar-chart span { background: linear-gradient(180deg, #a855f7, #2563eb); }
+.source-row > div { background: #312866; }
+.source-row i { background: linear-gradient(90deg, #8b5cf6, #3b82f6); }
+
+.signal-strip { border-color: #e0e3f2; background: #ffffff; }
+.signal-strip p,
+.signal-strip div { color: #747a96; }
+
+.feature-grid article,
+.lead-form,
+.form-success,
+.price-card,
+.auth-card,
+.workspace-card,
+.workspace-kpis article,
+.checkout-result,
+.setup-status,
+.setup-panel {
+  border-color: #dfe2f2;
+  background: #ffffff;
+}
+.feature-grid article:hover,
+.price-card.featured {
+  border-color: #8b7df0;
+  box-shadow: 0 22px 58px rgba(79, 70, 229, 0.14);
+}
+.feature-icon { stroke: #5b4be8; background: #eeecff; }
+
+.outcomes,
+footer { background: #110e30; }
+.outcomes-grid > div:first-child > p:last-child,
+footer { color: #b7bbd6; }
+.outcome-stats { border-color: rgba(255,255,255,.10); background: rgba(255,255,255,.08); }
+.outcome-stats article { background: #1b1645; }
+.outcome-stats strong { color: #93c5fd; }
+.outcome-stats span { color: #c4c7dc; }
+
+.workflow ol,
+.workflow li + li { border-color: #dfe2f2; }
+.workflow li > span { color: #6d5dfc; }
+
+.demo-section { background: #f0f1ff; }
+.sandbox-note {
+  border-left-color: #6366f1;
+  background: rgba(255,255,255,.72);
+}
+
+input,
+select { border-color: #cdd2ea; background: #fbfbff; }
+input:focus,
+select:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, .14);
+}
+.checkbox-row input { accent-color: #5b4be8; }
+.sandbox-consent { background: #f1f1ff; }
+.success-icon { color: #4f46e5; background: #ecebff; }
+
+.setup-status.ready,
+.status-ready {
+  border-color: #bbb4f4;
+  color: #4438b4;
+  background: #f0efff;
+}
+.status-pending { color: #6b4f94; background: #f3ecff; }
+.identity-chain span { border-color: #cbc9eb; color: #3f3678; }
+.identity-list dd,
+.workspace-kpis strong { color: #302061; }
+.event-stream strong { color: #4f46e5; }
+.event-stream article { background: #f5f5ff; }
+
+.test-note { border-color: #a8a1e8; background: #f0efff; }
+
+.consent-banner {
+  border-color: rgba(147, 197, 253, 0.24);
+  color: #ffffff;
+  background: rgba(17, 14, 48, 0.98);
+  box-shadow: 0 22px 60px rgba(17, 14, 48, 0.34);
+}
+.consent-banner p { color: #c4c7dc; }
+.consent-actions button {
+  border-color: #68638f;
+  color: #f8fafc;
+}
+.consent-actions .consent-accept {
+  border-color: transparent;
+  color: #ffffff;
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+}
+
+@media (max-width: 980px) {
+  .brand { width: 230px; }
+}
+
+@media (max-width: 640px) {
+  .brand { width: 190px; height: 40px; }
+  footer .brand { width: 220px; }
+  .site-header { min-height: 72px; }
+}
