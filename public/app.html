@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Inspect your resolved identity, attribution, and conversion data in the MeasureStack sandbox.">
-  <meta name="theme-color" content="#081b18">
+  <meta name="description" content="Inspect your canonical identity graph, attribution, lifecycle, and conversion data in the Measurement Stack sandbox.">
+  <meta name="theme-color" content="#17113f">
   <link rel="icon" href="/favicon.svg">
   <link rel="stylesheet" href="/styles.css">
-  <title>Identity workspace | MeasureStack</title>
+  <title>Identity workspace | Measurement Stack</title>
   <script>
     window.dataLayer = window.dataLayer || [];
     window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
@@ -30,24 +30,24 @@
 <body class="workspace-page">
   <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5MQ3QDNF" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <header class="site-header">
-    <a class="brand" href="/"><span class="brand-mark">M</span><span>MeasureStack</span></a>
+    <a class="brand" href="/" aria-label="Measurement Stack home"><span>Measurement Stack</span></a>
     <nav aria-label="Primary navigation"><a href="/app.html" aria-current="page">Workspace</a><a href="/pricing.html">Pricing</a><a href="/#demo">Lead test</a></nav>
     <div class="auth-nav" id="auth-nav"></div>
   </header>
 
   <main class="workspace-shell section-shell">
     <section class="workspace-heading">
-      <div><p class="eyebrow">Identity resolution workspace</p><h1>One person. Every measurable signal.</h1><p>Use this screen to compare browser identity, authentication, attribution, CRM delivery, and checkout records.</p></div>
+      <div><p class="eyebrow">Canonical identity workspace</p><h1>One person. Every measurable signal.</h1><p>Inspect the local browser envelope, deterministic account links, billing aliases, acquisition context, privacy policy, and structured dataLayer events.</p></div>
       <a class="primary-button" href="/pricing.html">Test checkout</a>
     </section>
 
-    <div id="workspace-loading" class="setup-panel">Authenticating and resolving identity…</div>
+    <div id="workspace-loading" class="setup-panel">Loading the browser identity graph and checking server resolution…</div>
     <section id="workspace-content" hidden>
       <div class="workspace-kpis">
         <article><span>Current plan</span><strong id="current-plan">Starter</strong></article>
-        <article><span>Identity storage</span><strong id="identity-storage">Pending</strong></article>
-        <article><span>Authentication</span><strong>Clerk</strong></article>
-        <article><span>Attribution model</span><strong>First + last touch</strong></article>
+        <article><span>Identity storage</span><strong id="identity-storage">Local envelope</strong></article>
+        <article><span>Authentication</span><strong id="auth-state">Anonymous</strong></article>
+        <article><span>Lifecycle stage</span><strong id="lifecycle-stage">Visitor</strong></article>
       </div>
 
       <div class="workspace-grid">
@@ -55,16 +55,35 @@
           <div class="card-heading"><div><p class="eyebrow">Canonical profile</p><h2>Resolved identity</h2></div><button class="text-button" id="refresh-identity" type="button">Refresh</button></div>
           <dl class="identity-list" id="identity-list"></dl>
         </article>
+
+        <article class="workspace-card wide-card">
+          <p class="eyebrow">Resolution cluster</p><h2>Canonical identity graph</h2>
+          <div class="graph-summary" id="graph-summary"></div>
+          <div class="graph-node-list" id="graph-node-list"></div>
+        </article>
+
         <article class="workspace-card">
           <p class="eyebrow">Acquisition context</p><h2>Last campaign touch</h2>
           <dl class="identity-list" id="attribution-list"></dl>
         </article>
+
         <article class="workspace-card">
           <p class="eyebrow">Destination readiness</p><h2>Connected systems</h2>
           <div class="integration-list" id="integration-list"></div>
         </article>
+
+        <article class="workspace-card">
+          <p class="eyebrow">Privacy and minimization</p><h2>Collection policy</h2>
+          <dl class="policy-list" id="policy-list"></dl>
+        </article>
+
         <article class="workspace-card wide-card">
-          <p class="eyebrow">Browser event stream</p><h2>Recent dataLayer events</h2>
+          <p class="eyebrow">Browser persistence</p><h2>Versioned localStorage envelopes</h2>
+          <pre class="envelope-viewer" id="envelope-viewer"></pre>
+        </article>
+
+        <article class="workspace-card wide-card">
+          <p class="eyebrow">Browser event stream</p><h2>Recent structured dataLayer events</h2>
           <div class="event-stream" id="event-stream"></div>
         </article>
       </div>
@@ -72,7 +91,7 @@
   </main>
 
   <aside class="consent-banner" id="consent-banner" aria-label="Cookie preferences" hidden><div><strong>Measurement sandbox</strong><p>Choose whether analytics and advertising tags may use this resolved identity.</p></div><div class="consent-actions"><button type="button" id="essential-only">Essential only</button><button type="button" class="consent-accept" id="accept-measurement">Accept measurement</button></div></aside>
-  <script src="/core.js" defer></script>
-  <script src="/dashboard.js" defer></script>
+  <script src="/core.js?v=20260805g" defer></script>
+  <script src="/dashboard.js?v=20260805g" defer></script>
 </body>
 </html>
