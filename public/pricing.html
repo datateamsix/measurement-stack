@@ -72,15 +72,30 @@
       </article>
     </section>
 
+    <section class="section-shell test-payment-panel" aria-labelledby="test-payment-title">
+      <div class="test-payment-copy">
+        <p class="eyebrow">Stripe test payment</p>
+        <h2 id="test-payment-title">Run a complete subscription transaction.</h2>
+        <p>Stripe-hosted Checkout does not permit a site to inject card numbers. Use these official test-mode values. Nothing is charged.</p>
+      </div>
+      <div class="test-payment-grid">
+        <div><span>Card number</span><code>4242 4242 4242 4242</code><button type="button" class="text-button" data-copy-field="card_number" data-copy-value="4242424242424242">Copy</button></div>
+        <div><span>Expiry</span><code>12 / 34</code><button type="button" class="text-button" data-copy-field="expiry" data-copy-value="12/34">Copy</button></div>
+        <div><span>CVC</span><code>123</code><button type="button" class="text-button" data-copy-field="cvc" data-copy-value="123">Copy</button></div>
+        <div><span>ZIP</span><code>12345</code><button type="button" class="text-button" data-copy-field="postal_code" data-copy-value="12345">Copy</button></div>
+      </div>
+      <p class="test-payment-help">After the first successful subscription, Measurement Stack links the Stripe customer, checkout session, subscription, browser graph, person ID, attribution touches, and shared event ID. Returning customer details may be prefilled by Stripe when the saved test payment method is eligible.</p>
+    </section>
+
     <section class="section-shell test-note">
       <strong>No real payment is collected.</strong>
-      <p>Growth and Scale use Stripe test mode. Prices and plans are fictitious and exist only to generate checkout, subscription, and purchase events.</p>
+      <p>Growth and Scale use Stripe test mode. Prices and plans are fictitious and exist only to generate checkout, subscription, purchase, webhook, and identity-graph events.</p>
     </section>
   </main>
 
   <footer><div class="section-shell footer-inner"><a class="brand" href="/" aria-label="Measurement Stack home"><span>Measurement Stack</span></a><p>The attribution and identity resolution OS for your business.</p><span>© 2026 Measurement Stack</span></div></footer>
   <aside class="consent-banner" id="consent-banner" aria-label="Cookie preferences" hidden><div><strong>Measurement sandbox</strong><p>Choose whether this demo may load analytics and advertising tags. Essential account and checkout functions remain available either way.</p></div><div class="consent-actions"><button type="button" id="essential-only">Essential only</button><button type="button" class="consent-accept" id="accept-measurement">Accept measurement</button></div></aside>
-  <script src="/core.js?v=20260805f" defer></script>
-  <script src="/pricing.js?v=20260805f" defer></script>
+  <script src="/core.js?v=20260805g" defer></script>
+  <script src="/pricing.js?v=20260805g" defer></script>
 </body>
 </html>
