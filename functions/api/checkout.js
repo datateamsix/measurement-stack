@@ -1,6 +1,7 @@
 import { authenticate } from '../lib/auth.js';
 import { errorResponse, HttpError, json, readJson, text } from '../lib/http.js';
 import { recordCheckout, syncPerson } from '../lib/identity.js';
+import { persistBillingGraph, persistIdentityGraph } from '../lib/identity-graph.js';
 import { sendLoopsEvent, settleDelivery } from '../lib/integrations.js';
 
 const PLANS = {
@@ -13,7 +14,10 @@ function d1SetupError(error) {
 }
 
 function throwD1SetupError() {
-  throw new HttpError(503, 'D1 is connected, but the identity schema is not installed. Apply migrations/0001_identity_resolution.sql to measurestack-identity, then retry checkout.');
+  throw new HttpError(
+    503,
+    'D1 is connected, but the identity schema is not installed. Apply all migrations to measurestack-identity, then retry checkout.',
+  );
 }
 
 export async function onRequestPost(context) {
@@ -36,6 +40,12 @@ export async function onRequestPost(context) {
         clerkUserId: authResult.auth?.userId || '',
         tracking,
       });
+      await persistIdentityGraph(env, {
+        identity,
+        user: authResult.user,
+        tracking,
+        sourceEventId: eventId,
+      });
     } catch (error) {
       if (d1SetupError(error)) throwD1SetupError();
       throw error;
@@ -50,23 +60,48 @@ export async function onRequestPost(context) {
     params.set('success_url', `${env.STRIPE_SUCCESS_URL || `${origin}/checkout-success.html`}?session_id={CHECKOUT_SESSION_ID}`);
     params.set('cancel_url', env.STRIPE_CANCEL_URL || `${origin}/pricing.html?checkout=cancelled`);
     params.set('client_reference_id', identity.person_id);
-    if (identity.primary_email) params.set('customer_email', identity.primary_email);
     params.set('allow_promotion_codes', 'true');
-    params.set('metadata[event_id]', eventId);
-    params.set('metadata[person_id]', identity.person_id);
-    params.set('metadata[analytics_user_id]', identity.analytics_user_id);
-    params.set('metadata[authentication_status]', identityMode);
+    params.set('billing_address_collection', 'auto');
+
+    if (identity.stripe_customer_id) {
+      params.set('customer', identity.stripe_customer_id);
+    } else if (identity.primary_email) {
+      params.set('customer_email', identity.primary_email);
+    }
+
+    const graph = tracking.identity_graph || {};
+    const web = graph.web || {};
+    const attribution = tracking.attribution_envelope || {};
+    const consent = tracking.consent || {};
+    const metadata = {
+      event_id: eventId,
+      person_id: identity.person_id,
+      analytics_user_id: identity.analytics_user_id,
+      authentication_status: identityMode,
+      plan,
+      browser_id: text(web.browser_id || tracking.browser_id, 100),
+      web_graph_id: text(graph.web_graph_id || tracking.web_graph_id, 100),
+      anonymous_user_id: text(web.anonymous_id || tracking.anonymous_user_id, 100),
+      network_observation_id: text(web.last_network_observation_id || tracking.network_observation_id, 100),
+      consent_snapshot_id: text(graph.consent_snapshot_id || consent.consent_snapshot_id, 100),
+      first_touch_id: text(attribution.first_touch_id, 100),
+      last_touch_id: text(attribution.last_touch_id, 100),
+    };
+    const clerkUserId = identity.clerk_user_id || authResult.auth?.userId || '';
+    if (clerkUserId) metadata.clerk_user_id = clerkUserId;
+
+    for (const [key, value] of Object.entries(metadata)) {
+      if (value) params.set(`metadata[${key}]`, String(value));
+    }
+
     params.set('subscription_data[metadata][event_id]', eventId);
     params.set('subscription_data[metadata][person_id]', identity.person_id);
+    params.set('subscription_data[metadata][analytics_user_id]', identity.analytics_user_id);
     params.set('subscription_data[metadata][plan]', plan);
     params.set('subscription_data[metadata][authentication_status]', identityMode);
 
-    const clerkUserId = identity.clerk_user_id || authResult.auth?.userId || '';
-    if (clerkUserId) params.set('metadata[clerk_user_id]', clerkUserId);
-    if (tracking.anonymous_user_id) params.set('metadata[anonymous_user_id]', text(tracking.anonymous_user_id, 100));
-
     const touch = tracking.attribution?.last_touch || {};
-    for (const key of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'li_fat_id', 'fbclid']) {
+    for (const key of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'gclid', 'dclid', 'li_fat_id', 'fbclid']) {
       const value = text(touch[key], 500);
       if (value) params.set(`metadata[${key}]`, value);
     }
@@ -92,9 +127,18 @@ export async function onRequestPost(context) {
         amountTotal: PLANS[plan].amount,
         currency: 'usd',
         paymentStatus: session.payment_status || 'unpaid',
-        customerId: typeof session.customer === 'string' ? session.customer : '',
+        customerId: typeof session.customer === 'string' ? session.customer : identity.stripe_customer_id || '',
         webhookReceived: false,
         createdAt: new Date().toISOString(),
+      });
+      await persistBillingGraph(env, {
+        personId: identity.person_id,
+        browserId: metadata.browser_id,
+        eventId,
+        stripeCustomerId: typeof session.customer === 'string' ? session.customer : identity.stripe_customer_id || '',
+        checkoutSessionId: session.id,
+        planId: plan,
+        paymentStatus: session.payment_status || 'unpaid',
       });
     } catch (error) {
       if (d1SetupError(error)) throwD1SetupError();
@@ -119,6 +163,8 @@ export async function onRequestPost(context) {
         value: PLANS[plan].amount / 100,
         currency: 'USD',
         authenticationStatus: identityMode,
+        browserId: metadata.browser_id,
+        webGraphId: metadata.web_graph_id,
       },
     }));
 
@@ -129,6 +175,8 @@ export async function onRequestPost(context) {
       eventId,
       identity,
       identityMode,
+      testMode: String(env.STRIPE_SECRET_KEY).startsWith('sk_test_'),
+      reusedStripeCustomer: Boolean(identity.stripe_customer_id),
       delivery: { loops },
     }, 201);
   } catch (error) {
