@@ -3,7 +3,7 @@ pages_build_output_dir = "./public"
 compatibility_date = "2026-08-05"
 compatibility_flags = ["nodejs_compat"]
 
-
-# Create a D1 database named measurestack-identity, then bind it in the
-# Cloudflare Pages dashboard with the variable name MEASURESTACK_DB.
-# The database ID is intentionally not committed because it is account-specific.
+[[d1_databases]]
+binding = "DB"
+database_name = "measurestack-identity"
+database_id = "96ebc52b-126a-4c31-8441-f412faa7ae35"
