@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Sign in to the MeasureStack identity resolution sandbox.">
+  <meta name="theme-color" content="#081b18">
+  <link rel="icon" href="/favicon.svg">
+  <link rel="stylesheet" href="/styles.css">
+  <title>Sign in | MeasureStack</title>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
+    (function () {
+      let consent = { analytics: false, marketing: false };
+      try { consent = JSON.parse(localStorage.getItem('measurestack_consent_v1')) || consent; } catch (_) {}
+      window.gtag('consent', 'default', {
+        analytics_storage: consent.analytics ? 'granted' : 'denied',
+        ad_storage: consent.marketing ? 'granted' : 'denied',
+        ad_user_data: consent.marketing ? 'granted' : 'denied',
+        ad_personalization: consent.marketing ? 'granted' : 'denied',
+        wait_for_update: 500
+      });
+    })();
+  </script>
+  <!-- Google Tag Manager -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-5MQ3QDNF');</script>
+  <!-- End Google Tag Manager -->
+</head>
+<body class="auth-page">
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5MQ3QDNF" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+  <header class="site-header">
+    <a class="brand" href="/"><span class="brand-mark">M</span><span>MeasureStack</span></a>
+    <nav aria-label="Primary navigation"><a href="/#platform">Platform</a><a href="/pricing.html">Pricing</a><a href="/#demo">Demo</a></nav>
+    <div class="auth-nav" id="auth-nav"></div>
+  </header>
+  <main class="auth-shell section-shell">
+    <section class="auth-copy">
+      <p class="eyebrow">Resolve the customer journey</p>
+      <h1>Sign in and watch anonymous signals become a known identity.</h1>
+      <p>Your browser IDs, campaign touch, GA identifiers, account identity, lead activity, and Stripe test customer can all resolve to one canonical MeasureStack person.</p>
+      <div class="identity-chain" aria-label="Identity resolution sequence"><span>Anonymous ID</span><i>→</i><span>Clerk user</span><i>→</i><span>Person ID</span><i>→</i><span>CRM + ad platforms</span></div>
+    </section>
+    <section class="auth-card">
+      <div id="auth-setup" class="setup-panel">Loading authentication…</div>
+      <div id="clerk-sign-in"></div>
+    </section>
+  </main>
+  <aside class="consent-banner" id="consent-banner" aria-label="Cookie preferences" hidden><div><strong>Measurement sandbox</strong><p>Authentication remains available without advertising consent.</p></div><div class="consent-actions"><button type="button" id="essential-only">Essential only</button><button type="button" class="consent-accept" id="accept-measurement">Accept measurement</button></div></aside>
+  <script src="/core.js" defer></script>
+  <script src="/auth.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Choose a MeasureStack sandbox plan and test identity-aware Stripe Checkout conversion tracking.">
+  <meta name="theme-color" content="#081b18">
+  <link rel="icon" href="/favicon.svg">
+  <link rel="stylesheet" href="/styles.css">
+  <title>Pricing | MeasureStack</title>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
+    (function () {
+      let consent = { analytics: false, marketing: false };
+      try { consent = JSON.parse(localStorage.getItem('measurestack_consent_v1')) || consent; } catch (_) {}
+      window.gtag('consent', 'default', {
+        analytics_storage: consent.analytics ? 'granted' : 'denied',
+        ad_storage: consent.marketing ? 'granted' : 'denied',
+        ad_user_data: consent.marketing ? 'granted' : 'denied',
+        ad_personalization: consent.marketing ? 'granted' : 'denied',
+        wait_for_update: 500
+      });
+    })();
+  </script>
+  <!-- Google Tag Manager -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-5MQ3QDNF');</script>
+  <!-- End Google Tag Manager -->
+</head>
+<body class="product-page">
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5MQ3QDNF" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+  <header class="site-header">
+    <a class="brand" href="/"><span class="brand-mark">M</span><span>MeasureStack</span></a>
+    <nav aria-label="Primary navigation"><a href="/#platform">Platform</a><a href="/pricing.html" aria-current="page">Pricing</a><a href="/#demo">Demo</a></nav>
+    <div class="auth-nav" id="auth-nav"><a class="nav-link" href="/sign-in.html">Sign in</a><a class="nav-button" href="/pricing.html">Start free</a></div>
+  </header>
+
+  <main>
+    <section class="page-hero section-shell centered">
+      <p class="eyebrow">Simple sandbox pricing</p>
+      <h1>Build an attribution system your business can actually explain.</h1>
+      <p>Start with identity resolution, then test subscription conversion events through Stripe, Loops, D1, GTM, and server-side destinations.</p>
+      <div class="setup-status" id="pricing-status">Checking sandbox integrations…</div>
+    </section>
+
+    <section class="pricing-grid section-shell" aria-label="MeasureStack plans">
+      <article class="price-card">
+        <p class="plan-label">Starter</p>
+        <h2>$0<span>/month</span></h2>
+        <p>For learning the identity lifecycle with one workspace and test data.</p>
+        <ul><li>Anonymous and signed-in identity</li><li>First- and last-touch attribution</li><li>Lead conversion events</li><li>Identity debug workspace</li></ul>
+        <button class="secondary-button plan-button" type="button" data-plan="starter">Create free workspace</button>
+      </article>
+      <article class="price-card featured">
+        <div class="popular-pill">Best test path</div>
+        <p class="plan-label">Growth</p>
+        <h2>$49<span>/month</span></h2>
+        <p>Test a Stripe subscription lifecycle and purchase deduplication.</p>
+        <ul><li>Everything in Starter</li><li>Stripe test Checkout</li><li>CRM contact and event sync</li><li>Meta and LinkedIn CAPI-ready payload</li></ul>
+        <button class="primary-button plan-button" type="button" data-plan="growth">Start test checkout</button>
+      </article>
+      <article class="price-card">
+        <p class="plan-label">Scale</p>
+        <h2>$149<span>/month</span></h2>
+        <p>Simulate a higher-value plan while preserving the same person and event IDs.</p>
+        <ul><li>Everything in Growth</li><li>Enterprise plan metadata</li><li>Multi-destination delivery log</li><li>Attribution payload inspection</li></ul>
+        <button class="secondary-button plan-button" type="button" data-plan="scale">Start test checkout</button>
+      </article>
+    </section>
+
+    <section class="section-shell test-note">
+      <strong>No real payment is collected.</strong>
+      <p>Growth and Scale use Stripe test mode. Prices and plans are fictitious and exist only to generate checkout, subscription, and purchase events.</p>
+    </section>
+  </main>
+
+  <footer><div class="section-shell footer-inner"><a class="brand" href="/"><span class="brand-mark">M</span><span>MeasureStack</span></a><p>The attribution and identity resolution OS for your business.</p><span>© 2026 MeasureStack</span></div></footer>
+  <aside class="consent-banner" id="consent-banner" aria-label="Cookie preferences" hidden><div><strong>Measurement sandbox</strong><p>Choose whether this demo may load analytics and advertising tags. Essential account and checkout functions remain available either way.</p></div><div class="consent-actions"><button type="button" id="essential-only">Essential only</button><button type="button" class="consent-accept" id="accept-measurement">Accept measurement</button></div></aside>
+  <script src="/core.js" defer></script>
+  <script src="/pricing.js" defer></script>
+</body>
+</html>

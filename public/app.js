@@ -1,135 +1,245 @@
-const form = document.querySelector('#lead-form');
-const statusBox = document.querySelector('#form-status');
-const submitButton = document.querySelector('#submit-button');
+(() => {
+  'use strict';
 
-window.dataLayer = window.dataLayer || [];
-const pushEvent = (event, data = {}) => window.dataLayer.push({ event, ...data });
+  const form = document.getElementById('lead-form');
+  if (!form) return;
 
-function getOrCreate(storageKey, prefix) {
-  let value = localStorage.getItem(storageKey);
-  if (!value) {
-    value = `${prefix}_${crypto.randomUUID()}`;
-    localStorage.setItem(storageKey, value);
-  }
-  return value;
-}
+  const { track, trackingContext, parseJson, STORAGE, escapeHtml, authFetch } = window.MeasureStack;
+  const success = document.getElementById('form-success');
+  const submitButton = document.getElementById('submit-button');
+  const submitError = document.getElementById('submit-error');
+  let formStarted = false;
+  let formViewed = false;
 
-function cookieValue(name) {
-  const row = document.cookie.split('; ').find((item) => item.startsWith(`${name}=`));
-  return row ? decodeURIComponent(row.split('=').slice(1).join('=')) : '';
-}
-
-function captureAttribution() {
-  const params = new URLSearchParams(location.search);
-  const keys = ['utm_source', 'utm_medium', 'utm_content', 'utm_campaign'];
-  const stored = JSON.parse(localStorage.getItem('measurestack_last_touch') || '{}');
-  const current = {};
-  keys.forEach((key) => {
-    const value = params.get(key);
-    if (value) current[key] = value.slice(0, 500);
+  document.querySelectorAll('.js-demo-cta').forEach((button) => {
+    button.addEventListener('click', () => {
+      track('cta_click', { cta_text: button.textContent.trim(), cta_location: button.dataset.ctaLocation });
+      document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' });
+    });
   });
-  const lastTouch = Object.keys(current).length ? current : stored;
-  localStorage.setItem('measurestack_last_touch', JSON.stringify(lastTouch));
-  return lastTouch;
-}
 
-function setHidden(name, value) {
-  const field = form.elements.namedItem(name);
-  if (field) field.value = value || '';
-}
+  function setHiddenField(name, value) {
+    const field = form.elements[name];
+    if (field) field.value = value || '';
+  }
 
-function syncHiddenFields(eventId = '', happenedAt = '') {
-  const params = new URLSearchParams(location.search);
-  const suppliedPerson = params.get('person_id');
-  const suppliedAnalyticsUser = params.get('analytics_user_id');
-  if (suppliedPerson) localStorage.setItem('measurestack_person_id', suppliedPerson.slice(0, 100));
-  if (suppliedAnalyticsUser) localStorage.setItem('measurestack_analytics_user_id', suppliedAnalyticsUser.slice(0, 100));
+  function syncHiddenFields(eventId = '', happenedAt = '') {
+    const tracking = trackingContext();
+    const lastTouch = tracking.attribution?.last_touch || {};
+    setHiddenField('person_id', tracking.person_id);
+    setHiddenField('analytics_user_id', tracking.analytics_user_id);
+    setHiddenField('ga_cookie_id', tracking.ga_cookie_id);
+    setHiddenField('utm_source', lastTouch.utm_source);
+    setHiddenField('utm_medium', lastTouch.utm_medium);
+    setHiddenField('utm_content', lastTouch.utm_content);
+    setHiddenField('utm_campaign', lastTouch.utm_campaign);
+    setHiddenField('event_id', eventId);
+    setHiddenField('conversion_happened_at', happenedAt ? String(happenedAt) : '');
+    return tracking;
+  }
 
-  const attribution = captureAttribution();
-  setHidden('person_id', getOrCreate('measurestack_person_id', 'person'));
-  setHidden('analytics_user_id', getOrCreate('measurestack_analytics_user_id', 'analytics'));
-  setHidden('ga_cookie_id', cookieValue('_ga'));
-  setHidden('utm_source', attribution.utm_source);
-  setHidden('utm_medium', attribution.utm_medium);
-  setHidden('utm_content', attribution.utm_content);
-  setHidden('utm_campaign', attribution.utm_campaign);
-  setHidden('event_id', eventId);
-  setHidden('conversion_happened_at', happenedAt);
-}
+  syncHiddenFields();
 
-syncHiddenFields();
-pushEvent('measurement_initialized', { gtm_container_id: 'GTM-5MQ3QDNF' });
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver((entries, observer) => {
+      if (entries[0]?.isIntersecting && !formViewed) {
+        formViewed = true;
+        track('form_view', { form_id: 'demo_request', form_name: 'MeasureStack demo request' });
+        observer.disconnect();
+      }
+    }, { threshold: 0.35 }).observe(form);
+  }
 
-form.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  statusBox.textContent = '';
+  form.addEventListener('input', (event) => {
+    if (event.target.name) clearError(event.target.name);
+    if (!formStarted && event.target.type !== 'hidden') {
+      formStarted = true;
+      track('form_start', { form_id: 'demo_request', form_name: 'MeasureStack demo request' });
+    }
+  });
 
-  const eventId = crypto.randomUUID();
-  const happenedAt = Date.now();
-  syncHiddenFields(eventId, happenedAt);
+  function clearError(name) {
+    document.querySelector(`[data-error-for="${name}"]`)?.replaceChildren();
+    form.elements[name]?.removeAttribute('aria-invalid');
+  }
 
-  const data = Object.fromEntries(new FormData(form).entries());
-  data.privacyAccepted = form.privacyAccepted.checked;
-  data.marketingMeasurementConsent = form.marketingMeasurementConsent.checked;
-  data.eventId = eventId;
-  data.conversionHappenedAt = happenedAt;
-  data.tracking = {
-    person_id: data.person_id,
-    analytics_user_id: data.analytics_user_id,
-    ga_cookie_id: data.ga_cookie_id,
-    page_location: location.href,
-    page_referrer: document.referrer,
-    page_title: document.title,
-    attribution: captureAttribution()
+  function setError(name, message) {
+    const output = document.querySelector(`[data-error-for="${name}"]`);
+    if (output) output.textContent = message;
+    form.elements[name]?.setAttribute('aria-invalid', 'true');
+  }
+
+  function values() {
+    const data = new FormData(form);
+    return {
+      firstName: String(data.get('firstName') || '').trim(),
+      lastName: String(data.get('lastName') || '').trim(),
+      workEmail: String(data.get('workEmail') || '').trim(),
+      phone: String(data.get('phone') || '').trim(),
+      company: String(data.get('company') || '').trim(),
+      jobTitle: String(data.get('jobTitle') || '').trim(),
+      companySize: String(data.get('companySize') || ''),
+      useCase: String(data.get('useCase') || ''),
+      privacyAccepted: data.get('privacyAccepted') === 'on',
+      marketingMeasurementConsent: data.get('marketingMeasurementConsent') === 'on',
+      person_id: String(data.get('person_id') || ''),
+      analytics_user_id: String(data.get('analytics_user_id') || ''),
+      ga_cookie_id: String(data.get('ga_cookie_id') || ''),
+      utm_source: String(data.get('utm_source') || ''),
+      utm_medium: String(data.get('utm_medium') || ''),
+      utm_content: String(data.get('utm_content') || ''),
+      utm_campaign: String(data.get('utm_campaign') || ''),
+      event_id: String(data.get('event_id') || ''),
+      conversion_happened_at: Number(data.get('conversion_happened_at') || 0),
+      website: String(data.get('website') || '')
+    };
+  }
+
+  function validate(input) {
+    const errors = {};
+    if (!input.firstName) errors.firstName = 'Enter your first name.';
+    if (!input.lastName) errors.lastName = 'Enter your last name.';
+    if (!/^\S+@\S+\.\S+$/.test(input.workEmail)) errors.workEmail = 'Enter a valid work email.';
+    if (!input.company) errors.company = 'Enter your company.';
+    if (!input.jobTitle) errors.jobTitle = 'Enter your job title.';
+    if (!input.companySize) errors.companySize = 'Select a company size.';
+    if (!input.useCase) errors.useCase = 'Select a primary use case.';
+    if (!input.privacyAccepted) errors.privacyAccepted = 'You must accept the privacy notice.';
+    return errors;
+  }
+
+  const normalizeEmail = (value) => {
+    const email = value.trim().toLowerCase().replace(/\s+/g, '');
+    const [local, domain] = email.split('@');
+    if (!local || !domain) return email;
+    return `${['gmail.com', 'googlemail.com'].includes(domain) ? local.replace(/\./g, '') : local}@${domain}`;
   };
 
-  pushEvent('form_submit_attempt', {
-    event_id: eventId,
-    form_id: 'demo_request',
-    person_id: data.person_id,
-    analytics_user_id: data.analytics_user_id
-  });
+  const normalizePhone = (value) => {
+    const digits = value.replace(/\D/g, '');
+    if (!digits) return '';
+    return digits.length === 10 ? `+1${digits}` : `+${digits}`;
+  };
 
-  submitButton.disabled = true;
-  submitButton.textContent = 'Submitting…';
-
-  try {
-    const response = await fetch('/api/lead', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || 'Submission failed.');
-
-    pushEvent('generate_lead', {
-      event_id: result.eventId || eventId,
-      lead_id: result.leadId,
-      conversion_happened_at: happenedAt,
-      form_id: 'demo_request',
-      lead_type: 'demo_request',
-      person_id: data.person_id,
-      analytics_user_id: data.analytics_user_id,
-      user_id: data.analytics_user_id,
-      ga_cookie_id: data.ga_cookie_id,
-      utm_source: data.utm_source,
-      utm_medium: data.utm_medium,
-      utm_content: data.utm_content,
-      utm_campaign: data.utm_campaign,
-      consent: {
-        ad_user_data: data.marketingMeasurementConsent ? 'granted' : 'denied',
-        ad_personalization: data.marketingMeasurementConsent ? 'granted' : 'denied'
-      }
-    });
-
-    statusBox.textContent = `Test lead accepted. Lead ID: ${result.leadId}`;
-    form.reset();
-    syncHiddenFields();
-  } catch (error) {
-    statusBox.textContent = error.message;
-    pushEvent('form_submit_error', { event_id: eventId, error_message: error.message });
-  } finally {
-    submitButton.disabled = false;
-    submitButton.textContent = 'Request a demo';
+  async function sha256(value) {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+    return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
   }
-});
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    submitError.hidden = true;
+    form.querySelectorAll('[data-error-for]').forEach((node) => { node.textContent = ''; });
+    form.querySelectorAll('[aria-invalid]').forEach((node) => node.removeAttribute('aria-invalid'));
+
+    const eventId = crypto.randomUUID();
+    const happenedAt = Date.now();
+    const tracking = syncHiddenFields(eventId, happenedAt);
+    const input = values();
+    const errors = validate(input);
+
+    if (Object.keys(errors).length) {
+      Object.entries(errors).forEach(([name, message]) => setError(name, message));
+      track('form_validation_error', { form_id: 'demo_request', event_id: eventId, error_fields: Object.keys(errors).join(',') });
+      return;
+    }
+
+    track('form_submit_attempt', {
+      event_id: eventId,
+      form_id: 'demo_request',
+      person_id: tracking.person_id,
+      analytics_user_id: tracking.analytics_user_id,
+      authentication_status: (await window.MeasureStack.loadClerk()).clerk?.isSignedIn ? 'authenticated' : 'anonymous'
+    });
+
+    submitButton.disabled = true;
+    submitButton.textContent = 'Submitting test lead…';
+
+    try {
+      const response = await authFetch('/api/lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...input, eventId, conversionHappenedAt: happenedAt, tracking })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'The request could not be submitted.');
+
+      if (result.identity) window.MeasureStack.applyResolvedIdentity(result.identity);
+      const acceptedEventId = result.eventId || eventId;
+      const consentChoice = parseJson(localStorage.getItem(STORAGE.consent), { analytics: false, marketing: false });
+      const adsGranted = Boolean(consentChoice.marketing && input.marketingMeasurementConsent);
+      const emailHash = adsGranted ? await sha256(normalizeEmail(input.workEmail)) : '';
+      const phone = adsGranted ? normalizePhone(input.phone) : '';
+      const phoneHash = phone ? await sha256(phone) : '';
+      const liFatId = adsGranted
+        ? (tracking.attribution?.last_touch?.li_fat_id || tracking.attribution?.first_touch?.li_fat_id || '')
+        : '';
+      const lastTouch = tracking.attribution?.last_touch || {};
+
+      track('generate_lead', {
+        event_id: acceptedEventId,
+        lead_id: result.leadId || '',
+        conversion_happened_at: happenedAt,
+        form_id: 'demo_request',
+        form_name: 'MeasureStack demo request',
+        lead_type: 'demo_request',
+        company_size: input.companySize,
+        use_case: input.useCase,
+        person_id: result.identity?.person_id || tracking.person_id,
+        analytics_user_id: result.identity?.analytics_user_id || tracking.analytics_user_id,
+        user_id: result.identity?.analytics_user_id || tracking.analytics_user_id,
+        anonymous_user_id: tracking.anonymous_user_id,
+        ga_cookie_id: tracking.ga_cookie_id,
+        client_id: tracking.client_id,
+        session_id: tracking.session_id,
+        utm_source: lastTouch.utm_source || '',
+        utm_medium: lastTouch.utm_medium || '',
+        utm_content: lastTouch.utm_content || '',
+        utm_campaign: lastTouch.utm_campaign || '',
+        ...(adsGranted ? {
+          user_data: {
+            sha256_email_address: emailHash,
+            ...(phoneHash ? { sha256_phone_number: phoneHash } : {}),
+            ...(liFatId ? { linkedinFirstPartyId: liFatId } : {}),
+            companyName: input.company,
+            title: input.jobTitle,
+            address: { first_name: input.firstName.toLowerCase(), last_name: input.lastName.toLowerCase(), country: 'US' }
+          }
+        } : {}),
+        consent: { ad_user_data: adsGranted ? 'granted' : 'denied', ad_personalization: adsGranted ? 'granted' : 'denied' },
+        attribution: tracking.attribution,
+        delivery: result.delivery || {}
+      });
+
+      form.hidden = true;
+      success.hidden = false;
+      success.innerHTML = `
+        <div class="success-icon"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4 10 4 4 8-9"></path></svg></div>
+        <p class="eyebrow">Request received</p>
+        <h3>Your identity-aware lead is in the pipeline.</h3>
+        <p>Inspect Loops, D1, sGTM Preview, and the dataLayer to compare the same event across destinations.</p>
+        <dl>
+          <div><dt>Lead ID</dt><dd>${escapeHtml(result.leadId || '')}</dd></div>
+          <div><dt>Event ID</dt><dd>${escapeHtml(acceptedEventId)}</dd></div>
+          <div><dt>Person ID</dt><dd>${escapeHtml(result.identity?.person_id || tracking.person_id)}</dd></div>
+        </dl>
+        <a class="secondary-link" href="/app.html">Open identity workspace</a>
+        <button type="button" class="text-button" id="submit-another">Submit another test lead</button>`;
+      document.getElementById('submit-another').addEventListener('click', () => {
+        form.reset();
+        syncHiddenFields();
+        form.hidden = false;
+        success.hidden = true;
+        success.innerHTML = '';
+        submitButton.disabled = false;
+        submitButton.textContent = 'Request my demo';
+      });
+    } catch (error) {
+      submitError.textContent = error.message;
+      submitError.hidden = false;
+      submitButton.disabled = false;
+      submitButton.textContent = 'Request my demo';
+      track('form_submit_error', { event_id: eventId, form_id: 'demo_request', error_message: error.message.slice(0, 200) });
+    }
+  });
+})();

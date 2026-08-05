@@ -1,0 +1,23 @@
+@media (max-width: 980px) {
+  .pricing-grid { grid-template-columns: 1fr; max-width: 680px; }
+  .price-card.featured { transform: none; }
+  .price-card > p:not(.plan-label), .price-card ul { min-height: 0; }
+  .auth-shell { grid-template-columns: 1fr; gap: 40px; }
+  .workspace-heading { align-items: flex-start; flex-direction: column; }
+  .workspace-kpis { grid-template-columns: repeat(2, 1fr); }
+  .workspace-grid { grid-template-columns: 1fr; }
+  .workspace-card.wide-card { grid-column: auto; }
+}
+
+@media (max-width: 640px) {
+  .auth-nav .nav-link { display: none; }
+  .page-hero { padding-block: 65px 38px; }
+  .price-card { padding: 27px 22px; }
+  .auth-shell { padding-block: 42px; }
+  .auth-card { padding: 10px; }
+  .workspace-kpis { grid-template-columns: 1fr; }
+  .workspace-card { padding: 22px 18px; }
+  .identity-list { grid-template-columns: 1fr; }
+  .checkout-result { padding: 34px 22px; }
+  .checkout-details div { grid-template-columns: 1fr; gap: 5px; }
+}

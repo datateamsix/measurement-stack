@@ -1,146 +1,132 @@
-const MAX_BODY_BYTES = 32_000;
+import { authenticate } from '../lib/auth.js';
+import { errorResponse, HttpError, json, readJson, text } from '../lib/http.js';
+import { buildLead, isEmail } from '../lib/lead-model.js';
+import { recordLead, syncPerson } from '../lib/identity.js';
+import { sendGenericWebhook, sendLoopsEvent, sendServerEvent, settleDelivery } from '../lib/integrations.js';
 
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Cache-Control': 'no-store',
-      'X-Content-Type-Options': 'nosniff',
-    },
-  });
-}
-
-function text(value, maxLength = 500) {
-  return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
-}
-
-function isEmail(value) {
-  return /^\S+@\S+\.\S+$/.test(value);
-}
-
-export function buildLead(body, request) {
-  return {
-    leadId: crypto.randomUUID(),
-    eventId: text(body.eventId, 100) || crypto.randomUUID(),
-    receivedAt: new Date().toISOString(),
-    firstName: text(body.firstName, 100),
-    lastName: text(body.lastName, 100),
-    workEmail: text(body.workEmail, 254).toLowerCase(),
-    phone: text(body.phone, 40),
-    company: text(body.company, 200),
-    jobTitle: text(body.jobTitle, 200),
-    companySize: text(body.companySize, 50),
-    useCase: text(body.useCase, 100),
-    privacyAccepted: body.privacyAccepted === true,
-    marketingMeasurementConsent: body.marketingMeasurementConsent === true,
-    conversionHappenedAt: Number(body.conversionHappenedAt) || Date.now(),
-    identity: {
-      person_id: text(body.person_id || body.tracking?.person_id, 100),
-      analytics_user_id: text(body.analytics_user_id || body.tracking?.analytics_user_id, 100),
-      anonymous_user_id: text(body.tracking?.anonymous_user_id, 100),
-      ga_cookie_id: text(body.ga_cookie_id || body.tracking?.ga_cookie_id, 200),
-      ga_client_id: text(body.tracking?.client_id, 100),
-    },
-    attributionFields: {
-      utm_source: text(body.utm_source, 500),
-      utm_medium: text(body.utm_medium, 500),
-      utm_content: text(body.utm_content, 500),
-      utm_campaign: text(body.utm_campaign, 500),
-    },
-    tracking: {
-      person_id: text(body.tracking?.person_id, 100),
-      analytics_user_id: text(body.tracking?.analytics_user_id, 100),
-      anonymous_user_id: text(body.tracking?.anonymous_user_id, 100),
-      ga_cookie_id: text(body.tracking?.ga_cookie_id, 200),
-      client_id: text(body.tracking?.client_id, 100),
-      session_id: text(body.tracking?.session_id, 100),
-      page_location: text(body.tracking?.page_location, 1000),
-      page_referrer: text(body.tracking?.page_referrer, 1000),
-      page_title: text(body.tracking?.page_title, 300),
-      attribution: body.tracking?.attribution || {},
-    },
-    request: {
-      country: request.cf?.country || '',
-      colo: request.cf?.colo || '',
-      userAgent: text(request.headers.get('user-agent'), 500),
-    },
-  };
-}
-
-async function sendWebhook(lead, env) {
-  if (!env.LEAD_WEBHOOK_URL) return { configured: false, delivered: false };
-
-  const headers = { 'Content-Type': 'application/json' };
-  if (env.LEAD_WEBHOOK_BEARER_TOKEN) {
-    headers.Authorization = `Bearer ${env.LEAD_WEBHOOK_BEARER_TOKEN}`;
-  }
-
-  const response = await fetch(env.LEAD_WEBHOOK_URL, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ source: 'measurestack_leadgen', lead }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Webhook returned ${response.status}`);
-  }
-
-  return { configured: true, delivered: true, status: response.status };
-}
-
-export async function onRequestPost({ request, env }) {
-  const contentLength = Number(request.headers.get('content-length') || 0);
-  if (contentLength > MAX_BODY_BYTES) return json({ error: 'Request body is too large.' }, 413);
-
-  let body;
+export async function onRequestPost(context) {
   try {
-    body = await request.json();
-  } catch {
-    return json({ error: 'Request body must be valid JSON.' }, 400);
-  }
+    const { request, env } = context;
+    const body = await readJson(request, 32_000);
 
-  // A populated hidden field usually indicates automated form spam. Return a
-  // success-shaped response so bots receive no useful feedback.
-  if (text(body.website, 200)) {
-    return json({ ok: true, leadId: crypto.randomUUID(), eventId: body.eventId || crypto.randomUUID() }, 202);
-  }
+    if (text(body.website, 200)) {
+      return json({ ok: true, leadId: crypto.randomUUID(), eventId: body.eventId || crypto.randomUUID() }, 202);
+    }
 
-  const required = ['firstName', 'lastName', 'workEmail', 'company', 'jobTitle', 'companySize', 'useCase'];
-  const missing = required.filter((field) => !text(body[field]));
-  if (missing.length) return json({ error: `Missing required fields: ${missing.join(', ')}` }, 400);
-  if (!isEmail(text(body.workEmail))) return json({ error: 'A valid work email is required.' }, 400);
-  if (body.privacyAccepted !== true) return json({ error: 'Privacy notice acceptance is required.' }, 400);
+    const required = ['firstName', 'lastName', 'workEmail', 'company', 'jobTitle', 'companySize', 'useCase'];
+    const missing = required.filter((field) => !text(body[field]));
+    if (missing.length) throw new HttpError(400, `Missing required fields: ${missing.join(', ')}`);
+    if (!isEmail(text(body.workEmail))) throw new HttpError(400, 'A valid work email is required.');
+    if (body.privacyAccepted !== true) throw new HttpError(400, 'Privacy notice acceptance is required.');
 
-  const lead = buildLead(body, request);
-  let webhook = { configured: false, delivered: false };
+    const authResult = await authenticate(request, env, { required: false, includeUser: true });
+    const resolvedIdentity = authResult.isAuthenticated
+      ? await syncPerson(env, {
+          user: authResult.user,
+          clerkUserId: authResult.auth.userId,
+          tracking: body.tracking || {},
+        })
+      : {
+          person_id: text(body.person_id || body.tracking?.person_id, 100),
+          analytics_user_id: text(body.analytics_user_id || body.tracking?.analytics_user_id, 100),
+          clerk_user_id: '',
+          storage: env.MEASURESTACK_DB ? 'd1' : 'unbound',
+        };
 
-  try {
-    webhook = await sendWebhook(lead, env);
-  } catch (error) {
-    console.error('MeasureStack webhook failure', { leadId: lead.leadId, message: error.message });
-    return json({ error: 'The lead was validated but the configured webhook failed.', leadId: lead.leadId }, 502);
-  }
+    const lead = buildLead(body, request, resolvedIdentity);
+    const storage = await recordLead(env, lead);
+    const serverEvent = {
+      source: 'measurestack',
+      event_name: 'generate_lead',
+      event_id: lead.eventId,
+      event_time: Math.floor(lead.conversionHappenedAt / 1000),
+      action_source: 'website',
+      event_source_url: lead.tracking.page_location,
+      person_id: lead.identity.person_id,
+      analytics_user_id: lead.identity.analytics_user_id,
+      anonymous_user_id: lead.identity.anonymous_user_id,
+      ga_client_id: lead.identity.ga_client_id,
+      ga_cookie_id: lead.identity.ga_cookie_id,
+      email: lead.workEmail,
+      phone: lead.phone,
+      first_name: lead.firstName,
+      last_name: lead.lastName,
+      company: lead.company,
+      job_title: lead.jobTitle,
+      country: lead.request.country,
+      attribution: lead.tracking.attribution,
+      consent: {
+        advertising_measurement: lead.marketingMeasurementConsent,
+      },
+      custom_data: {
+        lead_id: lead.leadId,
+        company_size: lead.companySize,
+        use_case: lead.useCase,
+      },
+    };
 
-  if (String(env.DEBUG_LEADS).toLowerCase() === 'true') {
-    console.log('MeasureStack sandbox lead', lead);
-  } else {
+    const deliveries = await Promise.all([
+      settleDelivery('loops', sendLoopsEvent(env, {
+        email: lead.workEmail,
+        userId: lead.identity.person_id,
+        eventName: 'leadSubmitted',
+        idempotencyKey: lead.eventId,
+        contactProperties: {
+          firstName: lead.firstName,
+          lastName: lead.lastName,
+          company: lead.company,
+          jobTitle: lead.jobTitle,
+          companySize: lead.companySize,
+          useCase: lead.useCase,
+          personId: lead.identity.person_id,
+          analyticsUserId: lead.identity.analytics_user_id,
+          clerkUserId: lead.identity.clerk_user_id,
+          gaClientId: lead.identity.ga_client_id,
+          gaCookieId: lead.identity.ga_cookie_id,
+          utmSource: lead.attributionFields.utm_source,
+          utmMedium: lead.attributionFields.utm_medium,
+          utmCampaign: lead.attributionFields.utm_campaign,
+          utmContent: lead.attributionFields.utm_content,
+          latestLeadId: lead.leadId,
+          latestEventId: lead.eventId,
+          latestConversionAt: lead.receivedAt,
+        },
+        eventProperties: {
+          leadId: lead.leadId,
+          eventId: lead.eventId,
+          companySize: lead.companySize,
+          useCase: lead.useCase,
+          utmSource: lead.attributionFields.utm_source,
+          utmMedium: lead.attributionFields.utm_medium,
+          utmCampaign: lead.attributionFields.utm_campaign,
+          utmContent: lead.attributionFields.utm_content,
+        },
+      })),
+      settleDelivery('sgtm', sendServerEvent(env, serverEvent)),
+      settleDelivery('webhook', sendGenericWebhook(env, { source: 'measurestack_leadgen', lead })),
+    ]);
+
+    const delivery = Object.fromEntries(deliveries);
     console.log('MeasureStack lead accepted', {
       leadId: lead.leadId,
       eventId: lead.eventId,
-      useCase: lead.useCase,
-      companySize: lead.companySize,
-      marketingMeasurementConsent: lead.marketingMeasurementConsent,
-      webhookDelivered: webhook.delivered,
+      personId: lead.identity.person_id,
+      authenticated: authResult.isAuthenticated,
+      stored: storage.configured,
+      delivery,
     });
-  }
 
-  return json({
-    ok: true,
-    leadId: lead.leadId,
-    eventId: lead.eventId,
-    webhook,
-  }, 201);
+    return json({
+      ok: true,
+      leadId: lead.leadId,
+      eventId: lead.eventId,
+      identity: resolvedIdentity,
+      storage,
+      delivery,
+    }, 201);
+  } catch (error) {
+    return errorResponse(error);
+  }
 }
 
 export function onRequestGet() {

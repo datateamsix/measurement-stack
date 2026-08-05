@@ -1,4 +1,21 @@
-# Optional lead destination. Copy to .dev.vars for Wrangler local development.
+# Public runtime configuration
+MEASURESTACK_ENVIRONMENT=development
+CLERK_PUBLISHABLE_KEY=pk_test_replace_me
+CLERK_AUTHORIZED_PARTIES=http://localhost:8788,https://measurestack-leadgen.pages.dev
+
+# Server-only secrets
+CLERK_SECRET_KEY=sk_test_replace_me
+LOOPS_API_KEY=replace_me
+STRIPE_SECRET_KEY=sk_test_replace_me
+STRIPE_WEBHOOK_SECRET=whsec_replace_me
+STRIPE_GROWTH_PRICE_ID=price_replace_me
+STRIPE_SCALE_PRICE_ID=price_replace_me
+
+# Optional server-side event relay
+SGTM_EVENT_ENDPOINT=https://sgtm.example.com/measurestack/events
+SGTM_BEARER_TOKEN=replace_me
+
+# Optional generic webhook destination
 LEAD_WEBHOOK_URL=
 LEAD_WEBHOOK_BEARER_TOKEN=
 DEBUG_LEADS=false

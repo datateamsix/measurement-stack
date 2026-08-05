@@ -1,9 +1,17 @@
 {
   "name": "measurestack-leadgen",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --check public/app.js && node --check functions/api/lead.js && node --test"
+    "test": "node scripts/validate.mjs && node --test",
+    "dev": "wrangler pages dev public",
+    "deploy": "wrangler pages deploy public --project-name=measurestack-leadgen"
+  },
+  "dependencies": {
+    "@clerk/backend": "^3.11.7"
+  },
+  "devDependencies": {
+    "wrangler": "^4.118.0"
   }
 }

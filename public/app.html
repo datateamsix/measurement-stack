@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Inspect your resolved identity, attribution, and conversion data in the MeasureStack sandbox.">
+  <meta name="theme-color" content="#081b18">
+  <link rel="icon" href="/favicon.svg">
+  <link rel="stylesheet" href="/styles.css">
+  <title>Identity workspace | MeasureStack</title>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
+    (function () {
+      let consent = { analytics: false, marketing: false };
+      try { consent = JSON.parse(localStorage.getItem('measurestack_consent_v1')) || consent; } catch (_) {}
+      window.gtag('consent', 'default', {
+        analytics_storage: consent.analytics ? 'granted' : 'denied',
+        ad_storage: consent.marketing ? 'granted' : 'denied',
+        ad_user_data: consent.marketing ? 'granted' : 'denied',
+        ad_personalization: consent.marketing ? 'granted' : 'denied',
+        wait_for_update: 500
+      });
+    })();
+  </script>
+  <!-- Google Tag Manager -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-5MQ3QDNF');</script>
+  <!-- End Google Tag Manager -->
+</head>
+<body class="workspace-page">
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5MQ3QDNF" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+  <header class="site-header">
+    <a class="brand" href="/"><span class="brand-mark">M</span><span>MeasureStack</span></a>
+    <nav aria-label="Primary navigation"><a href="/app.html" aria-current="page">Workspace</a><a href="/pricing.html">Pricing</a><a href="/#demo">Lead test</a></nav>
+    <div class="auth-nav" id="auth-nav"></div>
+  </header>
+
+  <main class="workspace-shell section-shell">
+    <section class="workspace-heading">
+      <div><p class="eyebrow">Identity resolution workspace</p><h1>One person. Every measurable signal.</h1><p>Use this screen to compare browser identity, authentication, attribution, CRM delivery, and checkout records.</p></div>
+      <a class="primary-button" href="/pricing.html">Test checkout</a>
+    </section>
+
+    <div id="workspace-loading" class="setup-panel">Authenticating and resolving identity…</div>
+    <section id="workspace-content" hidden>
+      <div class="workspace-kpis">
+        <article><span>Current plan</span><strong id="current-plan">Starter</strong></article>
+        <article><span>Identity storage</span><strong id="identity-storage">Pending</strong></article>
+        <article><span>Authentication</span><strong>Clerk</strong></article>
+        <article><span>Attribution model</span><strong>First + last touch</strong></article>
+      </div>
+
+      <div class="workspace-grid">
+        <article class="workspace-card wide-card">
+          <div class="card-heading"><div><p class="eyebrow">Canonical profile</p><h2>Resolved identity</h2></div><button class="text-button" id="refresh-identity" type="button">Refresh</button></div>
+          <dl class="identity-list" id="identity-list"></dl>
+        </article>
+        <article class="workspace-card">
+          <p class="eyebrow">Acquisition context</p><h2>Last campaign touch</h2>
+          <dl class="identity-list" id="attribution-list"></dl>
+        </article>
+        <article class="workspace-card">
+          <p class="eyebrow">Destination readiness</p><h2>Connected systems</h2>
+          <div class="integration-list" id="integration-list"></div>
+        </article>
+        <article class="workspace-card wide-card">
+          <p class="eyebrow">Browser event stream</p><h2>Recent dataLayer events</h2>
+          <div class="event-stream" id="event-stream"></div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <aside class="consent-banner" id="consent-banner" aria-label="Cookie preferences" hidden><div><strong>Measurement sandbox</strong><p>Choose whether analytics and advertising tags may use this resolved identity.</p></div><div class="consent-actions"><button type="button" id="essential-only">Essential only</button><button type="button" class="consent-accept" id="accept-measurement">Accept measurement</button></div></aside>
+  <script src="/core.js" defer></script>
+  <script src="/dashboard.js" defer></script>
+</body>
+</html>
