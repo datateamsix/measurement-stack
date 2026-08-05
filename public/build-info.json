@@ -1,0 +1,6 @@
+{
+  "sourceBranch": "main",
+  "deploymentMarker": "2026-08-05T15:13:00Z",
+  "expectedClerkMode": "dependency-free-jwks",
+  "note": "This file exists to force a fresh Cloudflare Git deployment from the current main branch."
+}
