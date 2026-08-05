@@ -1,6 +1,7 @@
 import { authenticate } from '../lib/auth.js';
 import { errorResponse, HttpError, json, text } from '../lib/http.js';
 import { getCheckout, getPerson, getPersonById, recordCheckout, syncPerson } from '../lib/identity.js';
+import { persistBillingGraph } from '../lib/identity-graph.js';
 
 export async function onRequestGet(context) {
   try {
@@ -57,19 +58,34 @@ export async function onRequestGet(context) {
     const customerId = typeof session.customer === 'string'
       ? session.customer
       : session.customer?.id || stored?.stripe_customer_id || '';
+    const subscriptionId = typeof session.subscription === 'string'
+      ? session.subscription
+      : session.subscription?.id || '';
     const plan = session.metadata?.plan || stored?.plan_id || 'unknown';
+    const eventId = session.metadata?.event_id || stored?.event_id || session.id;
+    const paymentStatus = session.payment_status || stored?.payment_status || 'unpaid';
 
     await recordCheckout(env, {
       sessionId: session.id,
-      eventId: session.metadata?.event_id || stored?.event_id || session.id,
+      eventId,
       personId: sessionPersonId,
       plan,
       amountTotal: session.amount_total || stored?.amount_total || 0,
       currency: session.currency || stored?.currency || 'usd',
-      paymentStatus: session.payment_status || stored?.payment_status || 'unpaid',
+      paymentStatus,
       customerId,
       webhookReceived: Boolean(stored?.webhook_received),
       createdAt: stored?.created_at || new Date().toISOString(),
+    });
+    await persistBillingGraph(env, {
+      personId: sessionPersonId,
+      browserId: session.metadata?.browser_id || '',
+      eventId,
+      stripeCustomerId: customerId,
+      checkoutSessionId: session.id,
+      subscriptionId,
+      planId: plan,
+      paymentStatus,
     });
 
     return json({
@@ -78,14 +94,14 @@ export async function onRequestGet(context) {
       identityMode: authResult.isAuthenticated ? 'authenticated' : 'anonymous',
       session: {
         id: session.id,
-        event_id: session.metadata?.event_id || stored?.event_id || '',
+        event_id: eventId,
         plan,
         amount_total: session.amount_total || stored?.amount_total || 0,
         currency: session.currency || stored?.currency || 'usd',
-        payment_status: session.payment_status || stored?.payment_status || 'unpaid',
+        payment_status: paymentStatus,
         status: session.status || '',
         customer_id: customerId,
-        subscription_id: typeof session.subscription === 'string' ? session.subscription : session.subscription?.id || '',
+        subscription_id: subscriptionId,
         webhook_received: Boolean(stored?.webhook_received),
       },
     });
