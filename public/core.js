@@ -7,11 +7,11 @@
     person: 'measurestack_person_id',
     analyticsUser: 'measurestack_analytics_user_id',
     anonymous: 'measurestack_anonymous_user_id',
-    session: 'measurestack_session_id'
+    session: 'measurestack_session_id',
   };
   const TRACKED_QUERY_KEYS = [
     'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'utm_id',
-    'gclid', 'gbraid', 'wbraid', 'fbclid', 'msclkid', 'li_fat_id'
+    'gclid', 'dclid', 'gbraid', 'wbraid', 'fbclid', 'msclkid', 'li_fat_id',
   ];
 
   window.dataLayer = window.dataLayer || [];
@@ -22,12 +22,77 @@
   };
 
   const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, (character) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;'
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;',
   }[character]));
 
-  const track = (event, parameters = {}) => {
-    window.dataLayer.push({ event, event_timestamp: new Date().toISOString(), ...parameters });
-  };
+  function loadScript(src, attributes = {}) {
+    return new Promise((resolve, reject) => {
+      const existing = document.querySelector(`script[src="${src}"]`);
+      if (existing) {
+        if (existing.dataset.loaded === 'true') resolve();
+        else {
+          existing.addEventListener('load', resolve, { once: true });
+          existing.addEventListener('error', () => reject(new Error(`Failed to load ${src}`)), { once: true });
+        }
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = false;
+      script.crossOrigin = 'anonymous';
+      Object.entries(attributes).forEach(([key, value]) => script.setAttribute(key, value));
+      script.addEventListener('load', () => {
+        script.dataset.loaded = 'true';
+        resolve();
+      }, { once: true });
+      script.addEventListener('error', () => reject(new Error(`Failed to load ${src}`)), { once: true });
+      document.head.appendChild(script);
+    });
+  }
+
+  const identityReady = loadScript('/identity-graph.js?v=20260805g')
+    .then(() => window.MeasurementStackIdentity?.ready)
+    .catch((error) => {
+      console.error('Measurement Stack identity graph failed to load', error);
+      return null;
+    });
+
+  function track(event, parameters = {}) {
+    const graph = window.MeasurementStackIdentity;
+    const payload = graph
+      ? graph.eventEnvelope(event, parameters)
+      : { event, event_timestamp: new Date().toISOString(), ...parameters };
+    window.dataLayer.push(payload);
+
+    if (graph) {
+      if (event === 'form_submit_attempt') {
+        graph.recordLifecycle('lead_started', { source_event_id: payload.event_id });
+      } else if (event === 'generate_lead') {
+        graph.recordLifecycle('lead', {
+          lead_id: parameters.lead_id || '',
+          source_event_id: payload.event_id,
+        });
+      } else if (event === 'begin_checkout') {
+        graph.recordLifecycle('checkout_started', {
+          checkout_attempt_id: payload.event_id,
+          current_plan: parameters.plan_id || '',
+          source_event_id: payload.event_id,
+        });
+      } else if (event === 'purchase') {
+        graph.recordBilling({
+          event_id: payload.event_id,
+          checkout_session_id: parameters.transaction_id || '',
+          stripe_customer_id: parameters.stripe_customer_id || '',
+          subscription_id: parameters.subscription_id || '',
+          payment_status: 'paid',
+          plan: parameters.plan_id || '',
+        });
+      } else if (event === 'identity_resolved') {
+        graph.recordLifecycle('identified', { source_event_id: payload.event_id });
+      }
+    }
+    return payload;
+  }
 
   function setConsent(type, consent) {
     window.gtag('consent', type, {
@@ -35,7 +100,7 @@
       ad_storage: consent.marketing ? 'granted' : 'denied',
       ad_user_data: consent.marketing ? 'granted' : 'denied',
       ad_personalization: consent.marketing ? 'granted' : 'denied',
-      ...(type === 'default' ? { wait_for_update: 500 } : {})
+      ...(type === 'default' ? { wait_for_update: 500 } : {}),
     });
   }
 
@@ -47,17 +112,25 @@
     if (!stored) banner.hidden = false;
 
     function choose(consent) {
-      localStorage.setItem(STORAGE.consent, JSON.stringify(consent));
+      const graphConsent = window.MeasurementStackIdentity?.updateConsent(consent);
+      if (!graphConsent) localStorage.setItem(STORAGE.consent, JSON.stringify(consent));
       setConsent('update', consent);
       track('consent_update', {
         analytics_consent: consent.analytics ? 'granted' : 'denied',
-        marketing_consent: consent.marketing ? 'granted' : 'denied'
+        marketing_consent: consent.marketing ? 'granted' : 'denied',
+        consent_snapshot_id: graphConsent?.consent_snapshot_id || '',
       });
       banner.hidden = true;
     }
 
-    document.getElementById('essential-only')?.addEventListener('click', () => choose({ analytics: false, marketing: false }));
-    document.getElementById('accept-measurement')?.addEventListener('click', () => choose({ analytics: true, marketing: true }));
+    document.getElementById('essential-only')?.addEventListener('click', () => choose({
+      analytics: false,
+      marketing: false,
+    }));
+    document.getElementById('accept-measurement')?.addEventListener('click', () => choose({
+      analytics: true,
+      marketing: true,
+    }));
   }
 
   function currentTouch() {
@@ -72,17 +145,17 @@
       landing_page: location.href.slice(0, 1000),
       page_path: `${location.pathname}${location.search}`.slice(0, 1000),
       referrer: document.referrer.slice(0, 1000),
-      captured_at: new Date().toISOString()
+      captured_at: new Date().toISOString(),
     };
   }
 
-  function captureAttribution() {
+  function captureAttributionFallback() {
     const previous = parseJson(localStorage.getItem(STORAGE.attribution), {});
     const touch = currentTouch();
     const hasCampaignTouch = TRACKED_QUERY_KEYS.some((key) => Boolean(touch[key]));
     const attribution = {
       first_touch: previous.first_touch || touch,
-      last_touch: hasCampaignTouch ? touch : (previous.last_touch || touch)
+      last_touch: hasCampaignTouch ? touch : (previous.last_touch || touch),
     };
     localStorage.setItem(STORAGE.attribution, JSON.stringify(attribution));
     return attribution;
@@ -109,6 +182,8 @@
   }
 
   function trackingContext() {
+    if (window.MeasurementStackIdentity) return window.MeasurementStackIdentity.trackingContext();
+
     const gaCookieId = decodeURIComponent(getCookie('_ga'));
     return {
       attribution: parseJson(localStorage.getItem(STORAGE.attribution), {}),
@@ -117,10 +192,10 @@
       anonymous_user_id: getOrCreate(STORAGE.anonymous, localStorage, () => `anon_${crypto.randomUUID()}`),
       ga_cookie_id: gaCookieId,
       client_id: gaCookieId.match(/^GA\d+\.\d+\.(\d+\.\d+)$/)?.[1] || '',
-      session_id: getOrCreate(STORAGE.session, sessionStorage, () => String(Math.floor(Date.now() / 1000))),
+      session_id: getOrCreate(STORAGE.session, sessionStorage, () => `session_${crypto.randomUUID()}`),
       page_location: location.href,
       page_referrer: document.referrer,
-      page_title: document.title
+      page_title: document.title,
     };
   }
 
@@ -135,29 +210,10 @@
         environment: 'development',
         clerkPublishableKey: '',
         integrations: {},
-        error: error.message
+        error: error.message,
       };
     }
     return window.__measureStackConfig;
-  }
-
-  function loadScript(src, attributes = {}) {
-    return new Promise((resolve, reject) => {
-      const existing = document.querySelector(`script[src="${src}"]`);
-      if (existing) {
-        if (existing.dataset.loaded === 'true') resolve();
-        else existing.addEventListener('load', resolve, { once: true });
-        return;
-      }
-      const script = document.createElement('script');
-      script.src = src;
-      script.async = true;
-      script.crossOrigin = 'anonymous';
-      Object.entries(attributes).forEach(([key, value]) => script.setAttribute(key, value));
-      script.addEventListener('load', () => { script.dataset.loaded = 'true'; resolve(); }, { once: true });
-      script.addEventListener('error', () => reject(new Error(`Failed to load ${src}`)), { once: true });
-      document.head.appendChild(script);
-    });
   }
 
   let clerkPromise;
@@ -173,12 +229,12 @@
       const clerkDomain = atob(encodedDomain).slice(0, -1);
       await loadScript(`https://${clerkDomain}/npm/@clerk/ui@1/dist/ui.browser.js`);
       await loadScript(`https://${clerkDomain}/npm/@clerk/clerk-js@6/dist/clerk.browser.js`, {
-        'data-clerk-publishable-key': publishableKey
+        'data-clerk-publishable-key': publishableKey,
       });
       await window.Clerk.load({ ui: { ClerkUI: window.__internal_ClerkUICtor } });
       return { configured: true, clerk: window.Clerk };
     } catch (error) {
-      console.error('MeasureStack Clerk initialization failed', error);
+      console.error('Measurement Stack Clerk initialization failed', error);
       return { configured: true, clerk: null, error: error.message };
     }
   }
@@ -199,27 +255,34 @@
   function applyResolvedIdentity(identity) {
     if (identity?.person_id) localStorage.setItem(STORAGE.person, identity.person_id);
     if (identity?.analytics_user_id) localStorage.setItem(STORAGE.analyticsUser, identity.analytics_user_id);
+    return window.MeasurementStackIdentity?.applyResolvedIdentity(identity) || identity;
   }
 
   async function syncIdentity() {
+    await identityReady;
     const auth = await loadClerk();
     if (!auth.clerk?.isSignedIn) return { configured: auth.configured, signedIn: false };
+
     const response = await authFetch('/api/identity', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tracking: trackingContext() })
+      body: JSON.stringify({ tracking: trackingContext() }),
     });
     const result = await response.json().catch(() => ({}));
     if (response.ok) {
-      applyResolvedIdentity(result.identity);
-      const marker = `measurestack_identity_synced_${auth.clerk.user?.id || 'user'}`;
+      applyResolvedIdentity({
+        ...(result.identity || {}),
+        auth_providers: result.graph?.external_auth_identities || result.identity?.auth_providers || [],
+      });
+      const marker = `measurementstack_identity_synced_${auth.clerk.user?.id || 'user'}`;
       if (!sessionStorage.getItem(marker)) {
         track('identity_resolved', {
           person_id: result.identity?.person_id || '',
           analytics_user_id: result.identity?.analytics_user_id || '',
           auth_user_id: result.identity?.clerk_user_id || '',
           authentication_status: 'authenticated',
-          identity_storage: result.identity?.storage || 'unknown'
+          identity_storage: result.identity?.storage || 'unknown',
+          provider_count: result.graph?.external_auth_identities?.length || 0,
         });
         sessionStorage.setItem(marker, 'true');
       }
@@ -248,15 +311,17 @@
   }
 
   initializeConsent();
-  captureAttribution();
-  const ready = Promise.all([runtimeConfig(), renderAuthNav()]).then(async ([config]) => {
+  captureAttributionFallback();
+
+  const ready = Promise.all([identityReady, runtimeConfig(), renderAuthNav()]).then(async ([, config]) => {
     track('measurement_initialized', {
       measurement_environment: config.environment || 'development',
       gtm_container_id: 'GTM-5MQ3QDNF',
       auth_configured: Boolean(config.clerkPublishableKey),
       stripe_configured: Boolean(config.integrations?.stripe),
       loops_configured: Boolean(config.integrations?.loops),
-      d1_configured: Boolean(config.integrations?.d1)
+      d1_configured: Boolean(config.integrations?.d1),
+      identity_graph_version: window.MeasurementStackIdentity?.VERSION || 'fallback',
     });
     if ((await loadClerk()).clerk?.isSignedIn) await syncIdentity();
     return config;
@@ -273,6 +338,12 @@
     authFetch,
     syncIdentity,
     applyResolvedIdentity,
-    ready
+    ready,
+    identityReady,
+    identitySnapshot: () => window.MeasurementStackIdentity?.snapshot() || null,
+    recordLifecycle: (...args) => window.MeasurementStackIdentity?.recordLifecycle(...args),
+    recordBilling: (...args) => window.MeasurementStackIdentity?.recordBilling(...args),
+    refreshNetworkContext: () => window.MeasurementStackIdentity?.refreshNetworkContext(),
+    IDENTITY_STORAGE: () => window.MeasurementStackIdentity?.STORAGE || {},
   };
 })();
