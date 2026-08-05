@@ -8,6 +8,14 @@ const PLANS = {
   scale: { amount: 14900, envPrice: 'STRIPE_SCALE_PRICE_ID' },
 };
 
+function d1SetupError(error) {
+  return /no such table|d1_error/i.test(error?.message || '');
+}
+
+function throwD1SetupError() {
+  throw new HttpError(503, 'D1 is connected, but the identity schema is not installed. Apply migrations/0001_identity_resolution.sql to measurestack-identity, then retry checkout.');
+}
+
 export async function onRequestPost(context) {
   try {
     const { request, env } = context;
@@ -21,11 +29,18 @@ export async function onRequestPost(context) {
 
     const tracking = body.tracking && typeof body.tracking === 'object' ? body.tracking : {};
     const eventId = text(body.eventId, 100) || crypto.randomUUID();
-    const identity = await syncPerson(env, {
-      user: authResult.user,
-      clerkUserId: authResult.auth?.userId || '',
-      tracking,
-    });
+    let identity;
+    try {
+      identity = await syncPerson(env, {
+        user: authResult.user,
+        clerkUserId: authResult.auth?.userId || '',
+        tracking,
+      });
+    } catch (error) {
+      if (d1SetupError(error)) throwD1SetupError();
+      throw error;
+    }
+
     const identityMode = authResult.isAuthenticated ? 'authenticated' : 'anonymous';
     const origin = new URL(request.url).origin;
     const params = new URLSearchParams();
@@ -68,18 +83,23 @@ export async function onRequestPost(context) {
     if (!response.ok) throw new HttpError(502, session.error?.message || 'Stripe could not create a Checkout Session.');
     if (!session.url) throw new HttpError(502, 'Stripe did not return a Checkout URL.');
 
-    await recordCheckout(env, {
-      sessionId: session.id,
-      eventId,
-      personId: identity.person_id,
-      plan,
-      amountTotal: PLANS[plan].amount,
-      currency: 'usd',
-      paymentStatus: session.payment_status || 'unpaid',
-      customerId: typeof session.customer === 'string' ? session.customer : '',
-      webhookReceived: false,
-      createdAt: new Date().toISOString(),
-    });
+    try {
+      await recordCheckout(env, {
+        sessionId: session.id,
+        eventId,
+        personId: identity.person_id,
+        plan,
+        amountTotal: PLANS[plan].amount,
+        currency: 'usd',
+        paymentStatus: session.payment_status || 'unpaid',
+        customerId: typeof session.customer === 'string' ? session.customer : '',
+        webhookReceived: false,
+        createdAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      if (d1SetupError(error)) throwD1SetupError();
+      throw error;
+    }
 
     const [, loops] = await settleDelivery('loops', sendLoopsEvent(env, {
       email: identity.primary_email,
