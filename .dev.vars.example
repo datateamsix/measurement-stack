@@ -1,0 +1,4 @@
+# Optional lead destination. Copy to .dev.vars for Wrangler local development.
+LEAD_WEBHOOK_URL=
+LEAD_WEBHOOK_BEARER_TOKEN=
+DEBUG_LEADS=false
