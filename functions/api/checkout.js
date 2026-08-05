@@ -11,7 +11,7 @@ const PLANS = {
 export async function onRequestPost(context) {
   try {
     const { request, env } = context;
-    const authResult = await authenticate(request, env, { required: true, includeUser: true });
+    const authResult = await authenticate(request, env, { required: false, includeUser: true });
     const body = await readJson(request);
     const plan = text(body.plan, 40).toLowerCase();
     if (!PLANS[plan]) throw new HttpError(400, 'Select a valid paid plan.');
@@ -19,12 +19,14 @@ export async function onRequestPost(context) {
     const priceId = env[PLANS[plan].envPrice];
     if (!priceId) throw new HttpError(503, `The Stripe price for ${plan} is not configured.`);
 
+    const tracking = body.tracking && typeof body.tracking === 'object' ? body.tracking : {};
     const eventId = text(body.eventId, 100) || crypto.randomUUID();
     const identity = await syncPerson(env, {
       user: authResult.user,
-      clerkUserId: authResult.auth.userId,
-      tracking: body.tracking || {},
+      clerkUserId: authResult.auth?.userId || '',
+      tracking,
     });
+    const identityMode = authResult.isAuthenticated ? 'authenticated' : 'anonymous';
     const origin = new URL(request.url).origin;
     const params = new URLSearchParams();
     params.set('mode', 'subscription');
@@ -38,13 +40,17 @@ export async function onRequestPost(context) {
     params.set('metadata[event_id]', eventId);
     params.set('metadata[person_id]', identity.person_id);
     params.set('metadata[analytics_user_id]', identity.analytics_user_id);
-    params.set('metadata[clerk_user_id]', identity.clerk_user_id || authResult.auth.userId);
-    params.set('metadata[plan]', plan);
+    params.set('metadata[authentication_status]', identityMode);
     params.set('subscription_data[metadata][event_id]', eventId);
     params.set('subscription_data[metadata][person_id]', identity.person_id);
     params.set('subscription_data[metadata][plan]', plan);
+    params.set('subscription_data[metadata][authentication_status]', identityMode);
 
-    const touch = body.tracking?.attribution?.last_touch || {};
+    const clerkUserId = identity.clerk_user_id || authResult.auth?.userId || '';
+    if (clerkUserId) params.set('metadata[clerk_user_id]', clerkUserId);
+    if (tracking.anonymous_user_id) params.set('metadata[anonymous_user_id]', text(tracking.anonymous_user_id, 100));
+
+    const touch = tracking.attribution?.last_touch || {};
     for (const key of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'li_fat_id', 'fbclid']) {
       const value = text(touch[key], 500);
       if (value) params.set(`metadata[${key}]`, value);
@@ -60,6 +66,7 @@ export async function onRequestPost(context) {
     });
     const session = await response.json();
     if (!response.ok) throw new HttpError(502, session.error?.message || 'Stripe could not create a Checkout Session.');
+    if (!session.url) throw new HttpError(502, 'Stripe did not return a Checkout URL.');
 
     await recordCheckout(env, {
       sessionId: session.id,
@@ -82,7 +89,7 @@ export async function onRequestPost(context) {
       contactProperties: {
         personId: identity.person_id,
         analyticsUserId: identity.analytics_user_id,
-        clerkUserId: identity.clerk_user_id,
+        clerkUserId,
         pendingPlan: plan,
       },
       eventProperties: {
@@ -91,10 +98,19 @@ export async function onRequestPost(context) {
         plan,
         value: PLANS[plan].amount / 100,
         currency: 'USD',
+        authenticationStatus: identityMode,
       },
     }));
 
-    return json({ ok: true, url: session.url, sessionId: session.id, eventId, identity, delivery: { loops } }, 201);
+    return json({
+      ok: true,
+      url: session.url,
+      sessionId: session.id,
+      eventId,
+      identity,
+      identityMode,
+      delivery: { loops },
+    }, 201);
   } catch (error) {
     return errorResponse(error);
   }
