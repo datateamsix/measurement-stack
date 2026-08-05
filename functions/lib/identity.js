@@ -3,6 +3,10 @@ import { text } from './http.js';
 const PERSON_PATTERN = /^person_[A-Za-z0-9-]{8,100}$/;
 const ANALYTICS_PATTERN = /^analytics_[A-Za-z0-9-]{8,100}$/;
 
+function database(env) {
+  return env.MEASURESTACK_DB || env.DB || null;
+}
+
 function primaryEmail(user) {
   const emailId = user?.primaryEmailAddressId;
   return user?.emailAddresses?.find((item) => item.id === emailId)?.emailAddress
@@ -35,7 +39,7 @@ async function upsertIdentifier(db, personId, namespace, value, now) {
 }
 
 export function d1Configured(env) {
-  return Boolean(env.MEASURESTACK_DB);
+  return Boolean(database(env));
 }
 
 export async function syncPerson(env, { user, clerkUserId = '', tracking: trackingInput = {}, plan = '' }) {
@@ -59,28 +63,41 @@ export async function syncPerson(env, { user, clerkUserId = '', tracking: tracki
     };
   }
 
-  const db = env.MEASURESTACK_DB;
+  const db = database(env);
   let person = clerkUserId
     ? await db.prepare('SELECT * FROM persons WHERE clerk_user_id = ?').bind(clerkUserId).first()
     : null;
 
+  if (!person && PERSON_PATTERN.test(tracking.person_id)) {
+    person = await db.prepare('SELECT * FROM persons WHERE person_id = ?').bind(tracking.person_id).first();
+  }
+
+  if (!person && tracking.anonymous_user_id) {
+    person = await db.prepare(`
+      SELECT p.* FROM persons p
+      JOIN identifiers i ON i.person_id = p.person_id
+      WHERE i.namespace = 'anonymous_user_id' AND i.identifier_value = ?
+      LIMIT 1
+    `).bind(tracking.anonymous_user_id).first();
+  }
+
   if (!person && email) {
-    const match = await db.prepare(`
+    person = await db.prepare(`
       SELECT p.* FROM persons p
       JOIN identifiers i ON i.person_id = p.person_id
       WHERE i.namespace = 'email' AND i.identifier_value = ?
       LIMIT 1
     `).bind(email).first();
-    if (match) person = match;
   }
 
   if (!person) {
     const proposedPersonId = PERSON_PATTERN.test(tracking.person_id) ? tracking.person_id : `person_${crypto.randomUUID()}`;
-    const collision = await db.prepare('SELECT person_id FROM persons WHERE person_id = ?').bind(proposedPersonId).first();
-    const personId = collision ? `person_${crypto.randomUUID()}` : proposedPersonId;
-    const analyticsUserId = ANALYTICS_PATTERN.test(tracking.analytics_user_id)
+    const personId = proposedPersonId;
+    const proposedAnalyticsId = ANALYTICS_PATTERN.test(tracking.analytics_user_id)
       ? tracking.analytics_user_id
       : `analytics_${crypto.randomUUID()}`;
+    const analyticsCollision = await db.prepare('SELECT person_id FROM persons WHERE analytics_user_id = ?').bind(proposedAnalyticsId).first();
+    const analyticsUserId = analyticsCollision ? `analytics_${crypto.randomUUID()}` : proposedAnalyticsId;
 
     await db.prepare(`
       INSERT INTO persons (
@@ -161,14 +178,23 @@ export async function syncPerson(env, { user, clerkUserId = '', tracking: tracki
 }
 
 export async function getPerson(env, clerkUserId) {
-  if (!d1Configured(env)) return null;
-  const person = await env.MEASURESTACK_DB.prepare('SELECT * FROM persons WHERE clerk_user_id = ?').bind(clerkUserId).first();
+  const db = database(env);
+  if (!db || !clerkUserId) return null;
+  const person = await db.prepare('SELECT * FROM persons WHERE clerk_user_id = ?').bind(clerkUserId).first();
+  return person ? { ...person, storage: 'd1' } : null;
+}
+
+export async function getPersonById(env, personId) {
+  const db = database(env);
+  if (!db || !PERSON_PATTERN.test(text(personId, 100))) return null;
+  const person = await db.prepare('SELECT * FROM persons WHERE person_id = ?').bind(personId).first();
   return person ? { ...person, storage: 'd1' } : null;
 }
 
 export async function recordLead(env, lead) {
-  if (!d1Configured(env)) return { configured: false };
-  await env.MEASURESTACK_DB.prepare(`
+  const db = database(env);
+  if (!db) return { configured: false };
+  await db.prepare(`
     INSERT INTO leads (
       lead_id, event_id, person_id, email, company, job_title,
       company_size, use_case, attribution_json, created_at
@@ -189,8 +215,9 @@ export async function recordLead(env, lead) {
 }
 
 export async function recordCheckout(env, checkout) {
-  if (!d1Configured(env)) return { configured: false };
-  await env.MEASURESTACK_DB.prepare(`
+  const db = database(env);
+  if (!db) return { configured: false };
+  await db.prepare(`
     INSERT INTO checkout_sessions (
       stripe_session_id, event_id, person_id, plan_id, amount_total,
       currency, payment_status, stripe_customer_id, webhook_received, created_at, updated_at
@@ -215,22 +242,25 @@ export async function recordCheckout(env, checkout) {
   ).run();
 
   if (checkout.customerId) {
-    await env.MEASURESTACK_DB.prepare(`
+    const now = new Date().toISOString();
+    await db.prepare(`
       UPDATE persons SET stripe_customer_id = ?, current_plan = ?, updated_at = ? WHERE person_id = ?
-    `).bind(checkout.customerId, checkout.plan || 'starter', new Date().toISOString(), checkout.personId).run();
-    await upsertIdentifier(env.MEASURESTACK_DB, checkout.personId, 'stripe_customer_id', checkout.customerId, new Date().toISOString());
+    `).bind(checkout.customerId, checkout.plan || 'starter', now, checkout.personId).run();
+    await upsertIdentifier(db, checkout.personId, 'stripe_customer_id', checkout.customerId, now);
   }
   return { configured: true, stored: true };
 }
 
 export async function getCheckout(env, sessionId) {
-  if (!d1Configured(env)) return null;
-  return env.MEASURESTACK_DB.prepare('SELECT * FROM checkout_sessions WHERE stripe_session_id = ?').bind(sessionId).first();
+  const db = database(env);
+  if (!db) return null;
+  return db.prepare('SELECT * FROM checkout_sessions WHERE stripe_session_id = ?').bind(sessionId).first();
 }
 
 export async function recordConversion(env, conversion) {
-  if (!d1Configured(env)) return { configured: false };
-  await env.MEASURESTACK_DB.prepare(`
+  const db = database(env);
+  if (!db) return { configured: false };
+  await db.prepare(`
     INSERT INTO conversion_events (
       event_id, event_name, person_id, source, value, currency, payload_json, created_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
