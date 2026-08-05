@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="MeasureStack is a fictitious analytics SaaS lead-generation sandbox.">
+  <title>MeasureStack | Analytics without the blind spots</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: 'consent_default',
+      analytics_storage: 'denied',
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied'
+    });
+  </script>
+  <!-- Google Tag Manager -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-5MQ3QDNF');</script>
+  <!-- End Google Tag Manager -->
+</head>
+<body>
+  <!-- Google Tag Manager (noscript) -->
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5MQ3QDNF" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+  <!-- End Google Tag Manager (noscript) -->
+
+  <header class="site-header">
+    <a class="brand" href="#top">Measure<span>Stack</span></a>
+    <nav><a href="#platform">Platform</a><a href="#demo">Demo</a></nav>
+    <a class="button button-small" href="#demo">Request a demo</a>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">The analytics operations platform</p>
+        <h1>Turn scattered data into measurable growth.</h1>
+        <p class="lede">MeasureStack gives modern teams one place to govern tracking, validate pipelines, and understand which customer journeys produce revenue.</p>
+        <div class="actions"><a class="button" href="#demo">Request a demo</a><a class="text-link" href="#platform">Explore the platform</a></div>
+      </div>
+      <div class="dashboard" aria-label="Fictitious analytics dashboard preview">
+        <div class="dashboard-top"><span>Revenue attribution</span><strong>Last 30 days</strong></div>
+        <p class="metric">$1.84M</p>
+        <p class="positive">↑ 18.6% from previous period</p>
+        <div class="chart"><span style="height:38%"></span><span style="height:52%"></span><span style="height:46%"></span><span style="height:68%"></span><span style="height:61%"></span><span style="height:82%"></span><span style="height:92%"></span></div>
+        <div class="sources"><div><span>LinkedIn</span><strong>34%</strong></div><div><span>Google Ads</span><strong>29%</strong></div><div><span>Organic</span><strong>22%</strong></div></div>
+      </div>
+    </section>
+
+    <section id="platform" class="platform">
+      <p class="eyebrow">Built for measurement teams</p>
+      <h2>A cleaner foundation for every growth decision.</h2>
+      <div class="cards">
+        <article><h3>Govern the schema</h3><p>Standardize events, parameters, campaign naming, and identity fields before they reach production.</p></article>
+        <article><h3>Validate every signal</h3><p>Catch broken tags, consent gaps, duplicate conversions, and pipeline failures before reporting is affected.</p></article>
+        <article><h3>Connect spend to revenue</h3><p>Unify web, CRM, product, and media data into an attribution layer your team can trust.</p></article>
+      </div>
+    </section>
+
+    <section id="demo" class="demo-section">
+      <div class="demo-copy">
+        <p class="eyebrow">Conversion tracking sandbox</p>
+        <h2>See how MeasureStack would fit your data stack.</h2>
+        <p>This fictitious form is wired for GTM, Cloudflare Pages Functions, sGTM testing, and LinkedIn browser/server conversion deduplication.</p>
+        <ul><li>Shared browser/server event ID</li><li>Persistent first-party identity fields</li><li>Last-touch UTM capture</li><li>Accepted-lead conversion event</li></ul>
+      </div>
+
+      <form id="lead-form" class="lead-form">
+        <div class="form-heading"><p class="eyebrow">Request a demo</p><h2>Tell us about your measurement goals.</h2></div>
+        <div class="form-grid">
+          <label><span>First name</span><input name="firstName" autocomplete="given-name" required></label>
+          <label><span>Last name</span><input name="lastName" autocomplete="family-name" required></label>
+          <label class="wide"><span>Work email</span><input type="email" name="workEmail" autocomplete="email" required></label>
+          <label><span>Phone <em>Optional</em></span><input type="tel" name="phone" autocomplete="tel"></label>
+          <label><span>Company</span><input name="company" autocomplete="organization" required></label>
+          <label><span>Job title</span><input name="jobTitle" autocomplete="organization-title" required></label>
+          <label><span>Company size</span><select name="companySize" required><option value="">Select</option><option>1-50</option><option>51-250</option><option>251-1000</option><option>1000+</option></select></label>
+          <label class="wide"><span>Primary use case</span><select name="useCase" required><option value="">Select</option><option value="measurement_governance">Measurement governance</option><option value="attribution">Marketing attribution</option><option value="server_side_tracking">Server-side tracking</option><option value="data_quality">Data quality</option></select></label>
+        </div>
+
+        <input type="hidden" name="person_id">
+        <input type="hidden" name="analytics_user_id">
+        <input type="hidden" name="ga_cookie_id">
+        <input type="hidden" name="utm_source">
+        <input type="hidden" name="utm_medium">
+        <input type="hidden" name="utm_content">
+        <input type="hidden" name="utm_campaign">
+        <input type="hidden" name="event_id">
+        <input type="hidden" name="conversion_happened_at">
+        <label class="honeypot">Website<input name="website" tabindex="-1" autocomplete="off"></label>
+
+        <label class="checkbox"><input type="checkbox" name="privacyAccepted" required><span>I agree to the sandbox privacy notice and understand this is a fictitious demonstration.</span></label>
+        <label class="checkbox"><input type="checkbox" name="marketingMeasurementConsent"><span>Allow advertising measurement data to be used for LinkedIn conversion testing.</span></label>
+        <button id="submit-button" class="button full" type="submit">Request a demo</button>
+        <p id="form-status" class="form-status" role="status"></p>
+      </form>
+    </section>
+  </main>
+
+  <footer><span class="brand">Measure<span>Stack</span></span><p>Fictitious SaaS sandbox for measurement engineering.</p></footer>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
