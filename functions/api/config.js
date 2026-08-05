@@ -12,7 +12,7 @@ export function onRequestGet({ env }) {
     environment: env.MEASURESTACK_ENVIRONMENT || 'development',
     clerkPublishableKey: env.CLERK_PUBLISHABLE_KEY || '',
     integrations: {
-      d1: Boolean(env.MEASURESTACK_DB),
+      d1: Boolean(env.MEASURESTACK_DB || env.DB),
       loops: Boolean(env.LOOPS_API_KEY),
       stripe: stripeStatus.secretKey && stripeStatus.growthPrice && stripeStatus.scalePrice,
       stripeStatus,
