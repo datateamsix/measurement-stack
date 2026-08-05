@@ -2,6 +2,7 @@ import { authenticate } from '../lib/auth.js';
 import { errorResponse, HttpError, json, readJson, text } from '../lib/http.js';
 import { buildLead, isEmail } from '../lib/lead-model.js';
 import { recordLead, syncPerson } from '../lib/identity.js';
+import { persistIdentityGraph, persistLifecycleEvent } from '../lib/identity-graph.js';
 import { sendGenericWebhook, sendLoopsEvent, sendServerEvent, settleDelivery } from '../lib/integrations.js';
 
 export async function onRequestPost(context) {
@@ -20,23 +21,39 @@ export async function onRequestPost(context) {
     if (body.privacyAccepted !== true) throw new HttpError(400, 'Privacy notice acceptance is required.');
 
     const authResult = await authenticate(request, env, { required: false, includeUser: true });
-    const resolvedIdentity = authResult.isAuthenticated
-      ? await syncPerson(env, {
-          user: authResult.user,
-          clerkUserId: authResult.auth.userId,
-          tracking: body.tracking || {},
-        })
-      : {
-          person_id: text(body.person_id || body.tracking?.person_id, 100),
-          analytics_user_id: text(body.analytics_user_id || body.tracking?.analytics_user_id, 100),
-          clerk_user_id: '',
-          storage: env.MEASURESTACK_DB ? 'd1' : 'unbound',
-        };
+    const tracking = body.tracking || {};
+    const resolvedIdentity = await syncPerson(env, {
+      user: authResult.user,
+      clerkUserId: authResult.auth?.userId || '',
+      tracking,
+    });
 
     const lead = buildLead(body, request, resolvedIdentity);
+    const graphStorage = await persistIdentityGraph(env, {
+      identity: resolvedIdentity,
+      user: authResult.user,
+      tracking,
+      sourceEventId: lead.eventId,
+    });
     const storage = await recordLead(env, lead);
+    await persistLifecycleEvent(env, {
+      personId: lead.identity.person_id,
+      browserId: text(tracking.browser_id || tracking.identity_graph?.web?.browser_id, 120),
+      eventName: 'lead_submitted',
+      fromStage: 'visitor',
+      toStage: 'lead',
+      sourceEventId: lead.eventId,
+      leadId: lead.leadId,
+      payload: {
+        company_size: lead.companySize,
+        use_case: lead.useCase,
+        authentication_status: authResult.isAuthenticated ? 'authenticated' : 'anonymous',
+      },
+      occurredAt: lead.receivedAt,
+    });
+
     const serverEvent = {
-      source: 'measurestack',
+      source: 'measurement_stack',
       event_name: 'generate_lead',
       event_id: lead.eventId,
       event_time: Math.floor(lead.conversionHappenedAt / 1000),
@@ -45,6 +62,10 @@ export async function onRequestPost(context) {
       person_id: lead.identity.person_id,
       analytics_user_id: lead.identity.analytics_user_id,
       anonymous_user_id: lead.identity.anonymous_user_id,
+      browser_id: tracking.browser_id || tracking.identity_graph?.web?.browser_id || '',
+      web_graph_id: tracking.web_graph_id || tracking.identity_graph?.web_graph_id || '',
+      network_observation_id: tracking.network_observation_id || tracking.identity_graph?.web?.last_network_observation_id || '',
+      consent_snapshot_id: tracking.consent?.consent_snapshot_id || tracking.identity_graph?.consent_snapshot_id || '',
       ga_client_id: lead.identity.ga_client_id,
       ga_cookie_id: lead.identity.ga_cookie_id,
       email: lead.workEmail,
@@ -55,6 +76,7 @@ export async function onRequestPost(context) {
       job_title: lead.jobTitle,
       country: lead.request.country,
       attribution: lead.tracking.attribution,
+      attribution_envelope: tracking.attribution_envelope || {},
       consent: {
         advertising_measurement: lead.marketingMeasurementConsent,
       },
@@ -83,6 +105,8 @@ export async function onRequestPost(context) {
           clerkUserId: lead.identity.clerk_user_id,
           gaClientId: lead.identity.ga_client_id,
           gaCookieId: lead.identity.ga_cookie_id,
+          browserId: tracking.browser_id || tracking.identity_graph?.web?.browser_id || '',
+          webGraphId: tracking.web_graph_id || tracking.identity_graph?.web_graph_id || '',
           utmSource: lead.attributionFields.utm_source,
           utmMedium: lead.attributionFields.utm_medium,
           utmCampaign: lead.attributionFields.utm_campaign,
@@ -103,16 +127,17 @@ export async function onRequestPost(context) {
         },
       })),
       settleDelivery('sgtm', sendServerEvent(env, serverEvent)),
-      settleDelivery('webhook', sendGenericWebhook(env, { source: 'measurestack_leadgen', lead })),
+      settleDelivery('webhook', sendGenericWebhook(env, { source: 'measurement_stack_leadgen', lead })),
     ]);
 
     const delivery = Object.fromEntries(deliveries);
-    console.log('MeasureStack lead accepted', {
+    console.log('Measurement Stack lead accepted', {
       leadId: lead.leadId,
       eventId: lead.eventId,
       personId: lead.identity.person_id,
       authenticated: authResult.isAuthenticated,
       stored: storage.configured,
+      graphStored: graphStorage.stored,
       delivery,
     });
 
@@ -121,7 +146,7 @@ export async function onRequestPost(context) {
       leadId: lead.leadId,
       eventId: lead.eventId,
       identity: resolvedIdentity,
-      storage,
+      storage: { lead: storage, graph: graphStorage },
       delivery,
     }, 201);
   } catch (error) {
