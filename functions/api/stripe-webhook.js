@@ -1,5 +1,6 @@
 import { errorResponse, HttpError, json } from '../lib/http.js';
 import { recordCheckout, recordConversion } from '../lib/identity.js';
+import { persistBillingGraph } from '../lib/identity-graph.js';
 import { sendLoopsEvent, sendServerEvent, settleDelivery } from '../lib/integrations.js';
 import { verifyStripeSignature } from '../lib/stripe-signature.js';
 
@@ -27,9 +28,11 @@ export async function onRequestPost(context) {
     const personId = metadata.person_id || session.client_reference_id || '';
     const plan = metadata.plan || 'unknown';
     const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id || '';
+    const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id || '';
     const email = session.customer_details?.email || session.customer_email || '';
     const amount = Number(session.amount_total || 0);
     const currency = String(session.currency || 'usd').toUpperCase();
+    const occurredAt = new Date((event.created || Math.floor(Date.now() / 1000)) * 1000).toISOString();
 
     await recordCheckout(env, {
       sessionId: session.id,
@@ -41,7 +44,7 @@ export async function onRequestPost(context) {
       paymentStatus: session.payment_status || 'paid',
       customerId,
       webhookReceived: true,
-      createdAt: new Date((event.created || Math.floor(Date.now() / 1000)) * 1000).toISOString(),
+      createdAt: occurredAt,
     });
     await recordConversion(env, {
       eventId,
@@ -50,7 +53,24 @@ export async function onRequestPost(context) {
       source: 'stripe_webhook',
       value: amount / 100,
       currency,
-      payload: { stripe_session_id: session.id, stripe_customer_id: customerId, plan, event_type: event.type },
+      payload: {
+        stripe_session_id: session.id,
+        stripe_customer_id: customerId,
+        stripe_subscription_id: subscriptionId,
+        plan,
+        event_type: event.type,
+      },
+    });
+    await persistBillingGraph(env, {
+      personId,
+      browserId: metadata.browser_id || '',
+      eventId,
+      stripeCustomerId: customerId,
+      checkoutSessionId: session.id,
+      subscriptionId,
+      planId: plan,
+      paymentStatus: session.payment_status || 'paid',
+      occurredAt,
     });
 
     const serverEvent = {
@@ -61,13 +81,21 @@ export async function onRequestPost(context) {
       action_source: 'website',
       person_id: personId,
       analytics_user_id: metadata.analytics_user_id || '',
+      anonymous_user_id: metadata.anonymous_user_id || '',
+      browser_id: metadata.browser_id || '',
+      web_graph_id: metadata.web_graph_id || '',
+      network_observation_id: metadata.network_observation_id || '',
+      consent_snapshot_id: metadata.consent_snapshot_id || '',
       email,
       custom_data: {
         transaction_id: session.id,
         stripe_customer_id: customerId,
+        stripe_subscription_id: subscriptionId,
         plan,
         value: amount / 100,
         currency,
+        first_touch_id: metadata.first_touch_id || '',
+        last_touch_id: metadata.last_touch_id || '',
       },
     };
 
@@ -88,15 +116,26 @@ export async function onRequestPost(context) {
           eventId,
           stripeSessionId: session.id,
           stripeCustomerId: customerId,
+          stripeSubscriptionId: subscriptionId,
           plan,
           value: amount / 100,
           currency,
+          browserId: metadata.browser_id || '',
+          webGraphId: metadata.web_graph_id || '',
         },
       })),
       settleDelivery('sgtm', sendServerEvent(env, serverEvent)),
     ]);
 
-    return json({ received: true, eventId, delivery: Object.fromEntries(deliveries) });
+    return json({
+      received: true,
+      eventId,
+      personId,
+      checkoutSessionId: session.id,
+      stripeCustomerId: customerId,
+      stripeSubscriptionId: subscriptionId,
+      delivery: Object.fromEntries(deliveries),
+    });
   } catch (error) {
     return errorResponse(error);
   }
