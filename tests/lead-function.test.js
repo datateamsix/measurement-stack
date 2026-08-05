@@ -33,7 +33,7 @@ const validBody = {
     session_id: '1785904000',
     page_location: 'https://example.pages.dev/',
     page_referrer: '',
-    page_title: 'MeasureStack',
+    page_title: 'Measurement Stack',
     attribution: {
       first_touch: { utm_source: 'linkedin' },
       last_touch: { utm_source: 'linkedin' }
@@ -83,4 +83,22 @@ test('D1 migration defines person, identifier, lead, checkout and conversion tab
   for (const table of ['persons', 'identifiers', 'leads', 'checkout_sessions', 'conversion_events']) {
     assert.match(sql, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
   }
+});
+
+test('Wrangler binds the production identity database as DB', async () => {
+  const config = await readFile(new URL('../wrangler.toml', import.meta.url), 'utf8');
+  assert.match(config, /\[\[d1_databases\]\]/);
+  assert.match(config, /binding\s*=\s*"DB"/);
+  assert.match(config, /database_name\s*=\s*"measurestack-identity"/);
+});
+
+test('paid pricing buttons support guest checkout rather than requiring Clerk', async () => {
+  const pricing = await readFile(new URL('../public/pricing.js', import.meta.url), 'utf8');
+  const checkout = await readFile(new URL('../functions/api/checkout.js', import.meta.url), 'utf8');
+  const success = await readFile(new URL('../public/checkout-success.js', import.meta.url), 'utf8');
+
+  assert.match(pricing, /Continue as a guest/);
+  assert.match(checkout, /required:\s*false/);
+  assert.match(checkout, /authentication_status/);
+  assert.match(success, /person_id:\s*tracking\.person_id/);
 });
