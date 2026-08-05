@@ -120,6 +120,19 @@ async function verifySessionToken(token, request, env) {
   return payload;
 }
 
+function normalizeExternalAccount(account = {}) {
+  return {
+    id: account.id || '',
+    provider: account.provider || '',
+    providerUserId: account.provider_user_id || account.providerUserId || '',
+    username: account.username || '',
+    emailAddress: account.email_address || account.emailAddress || '',
+    verification: account.verification || null,
+    approvedScopes: account.approved_scopes || account.approvedScopes || '',
+    createdAt: account.created_at || account.createdAt || '',
+  };
+}
+
 function normalizeUser(user) {
   return {
     id: user.id,
@@ -132,6 +145,9 @@ function normalizeUser(user) {
           emailAddress: email.email_address || '',
           verification: email.verification || null,
         }))
+      : [],
+    externalAccounts: Array.isArray(user.external_accounts)
+      ? user.external_accounts.map(normalizeExternalAccount)
       : [],
   };
 }
