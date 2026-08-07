@@ -27,15 +27,34 @@ export async function sendLoopsEvent(env, input) {
 
 export async function sendServerEvent(env, event) {
   if (!env.SGTM_EVENT_ENDPOINT) return { configured: false, delivered: false };
+  const eventName = text(event?.event_name, 100);
+  if (!eventName) throw new Error('sGTM event_name is required.');
+
+  const endpoint = new URL(env.SGTM_EVENT_ENDPOINT);
+  const protocolVersion = text(env.SGTM_PROTOCOL_VERSION, 10) || '2';
+  endpoint.searchParams.set('v', protocolVersion);
+  endpoint.searchParams.set('event_name', eventName);
+
   const headers = { 'Content-Type': 'application/json' };
   if (env.SGTM_BEARER_TOKEN) headers.Authorization = `Bearer ${env.SGTM_BEARER_TOKEN}`;
-  const response = await fetch(env.SGTM_EVENT_ENDPOINT, {
+  if (env.SGTM_PREVIEW_HEADER) headers['X-Gtm-Server-Preview'] = text(env.SGTM_PREVIEW_HEADER, 1000);
+
+  const response = await fetch(endpoint.toString(), {
     method: 'POST',
     headers,
-    body: JSON.stringify(event),
+    body: JSON.stringify({ ...event, event_name: eventName, v: Number(protocolVersion) || 2 }),
   });
-  if (!response.ok) throw new Error(`sGTM endpoint returned ${response.status}`);
-  return { configured: true, delivered: true, status: response.status };
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(`sGTM endpoint returned ${response.status}${message ? `: ${message.slice(0, 200)}` : ''}`);
+  }
+  return {
+    configured: true,
+    delivered: true,
+    status: response.status,
+    client: 'stape_data_client',
+    protocolVersion,
+  };
 }
 
 export async function sendGenericWebhook(env, payload) {
@@ -55,7 +74,7 @@ export async function settleDelivery(name, promise) {
   try {
     return [name, await promise];
   } catch (error) {
-    console.error('MeasureStack delivery failed', { destination: name, message: error.message });
+    console.error('Measurement Stack delivery failed', { destination: name, message: error.message });
     return [name, { configured: true, delivered: false, error: error.message }];
   }
 }
