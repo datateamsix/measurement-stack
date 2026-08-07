@@ -3,6 +3,7 @@ import { errorResponse, HttpError, json, readJson, text } from '../lib/http.js';
 import { buildLead, isEmail } from '../lib/lead-model.js';
 import { recordLead, syncPerson } from '../lib/identity.js';
 import { persistIdentityGraph, persistLifecycleEvent } from '../lib/identity-graph.js';
+import { buildGenerateLeadServerEvent } from '../lib/conversion-event.js';
 import { sendGenericWebhook, sendLoopsEvent, sendServerEvent, settleDelivery } from '../lib/integrations.js';
 
 export async function onRequestPost(context) {
@@ -52,40 +53,7 @@ export async function onRequestPost(context) {
       occurredAt: lead.receivedAt,
     });
 
-    const serverEvent = {
-      source: 'measurement_stack',
-      event_name: 'generate_lead',
-      event_id: lead.eventId,
-      event_time: Math.floor(lead.conversionHappenedAt / 1000),
-      action_source: 'website',
-      event_source_url: lead.tracking.page_location,
-      person_id: lead.identity.person_id,
-      analytics_user_id: lead.identity.analytics_user_id,
-      anonymous_user_id: lead.identity.anonymous_user_id,
-      browser_id: tracking.browser_id || tracking.identity_graph?.web?.browser_id || '',
-      web_graph_id: tracking.web_graph_id || tracking.identity_graph?.web_graph_id || '',
-      network_observation_id: tracking.network_observation_id || tracking.identity_graph?.web?.last_network_observation_id || '',
-      consent_snapshot_id: tracking.consent?.consent_snapshot_id || tracking.identity_graph?.consent_snapshot_id || '',
-      ga_client_id: lead.identity.ga_client_id,
-      ga_cookie_id: lead.identity.ga_cookie_id,
-      email: lead.workEmail,
-      phone: lead.phone,
-      first_name: lead.firstName,
-      last_name: lead.lastName,
-      company: lead.company,
-      job_title: lead.jobTitle,
-      country: lead.request.country,
-      attribution: lead.tracking.attribution,
-      attribution_envelope: tracking.attribution_envelope || {},
-      consent: {
-        advertising_measurement: lead.marketingMeasurementConsent,
-      },
-      custom_data: {
-        lead_id: lead.leadId,
-        company_size: lead.companySize,
-        use_case: lead.useCase,
-      },
-    };
+    const serverEvent = await buildGenerateLeadServerEvent({ lead, tracking, request });
 
     const deliveries = await Promise.all([
       settleDelivery('loops', sendLoopsEvent(env, {
@@ -136,6 +104,7 @@ export async function onRequestPost(context) {
       eventId: lead.eventId,
       personId: lead.identity.person_id,
       authenticated: authResult.isAuthenticated,
+      advertisingMeasurementConsent: serverEvent.advertising_measurement_consent,
       stored: storage.configured,
       graphStored: graphStorage.stored,
       delivery,
