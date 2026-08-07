@@ -60,7 +60,6 @@ export async function buildGenerateLeadServerEvent({ lead, tracking = {}, reques
   const attribution = tracking.attribution_envelope || {};
   const lastTouch = attribution.last_touch || tracking.attribution?.last_touch || {};
   const firstTouch = attribution.first_touch || tracking.attribution?.first_touch || {};
-  const ids = clickIds(tracking);
   const page = pageParts(lead.tracking.page_location);
   const clientId = text(
     lead.identity.ga_client_id
@@ -115,9 +114,6 @@ export async function buildGenerateLeadServerEvent({ lead, tracking = {}, reques
     utm_campaign: text(lastTouch.campaign_name || lastTouch.utm_campaign, 500),
     utm_content: text(lastTouch.campaign_content || lastTouch.utm_content, 500),
     utm_term: text(lastTouch.campaign_term || lastTouch.utm_term, 500),
-    ...ids,
-    fbp: text(web.fbp_cookie, 500),
-    fbc: text(web.fbc_cookie, 500),
   };
 
   if (advertisingGranted) {
@@ -125,18 +121,22 @@ export async function buildGenerateLeadServerEvent({ lead, tracking = {}, reques
     const phone = normalizePhone(lead.phone);
     const ip = text(request.headers.get('cf-connecting-ip'), 100);
     const userAgent = text(request.headers.get('user-agent'), 1000);
-    payload.ip_override = ip;
-    payload.user_agent = userAgent;
-    payload.user_data = {
-      sha256_email_address: await sha256Hex(email),
-      ...(phone ? { sha256_phone_number: await sha256Hex(phone) } : {}),
-      address: {
-        first_name: lead.firstName.trim().toLowerCase(),
-        last_name: lead.lastName.trim().toLowerCase(),
-        country: text(request.cf?.country, 10).toLowerCase(),
+    Object.assign(payload, clickIds(tracking), {
+      fbp: text(web.fbp_cookie, 500),
+      fbc: text(web.fbc_cookie, 500),
+      ip_override: ip,
+      user_agent: userAgent,
+      user_data: {
+        sha256_email_address: await sha256Hex(email),
+        ...(phone ? { sha256_phone_number: await sha256Hex(phone) } : {}),
+        address: {
+          first_name: lead.firstName.trim().toLowerCase(),
+          last_name: lead.lastName.trim().toLowerCase(),
+          country: text(request.cf?.country, 10).toLowerCase(),
+        },
       },
-    };
-    payload.sha256_external_id = await sha256Hex(canonical.person_id || lead.identity.person_id);
+      sha256_external_id: await sha256Hex(canonical.person_id || lead.identity.person_id),
+    });
   }
 
   return payload;
