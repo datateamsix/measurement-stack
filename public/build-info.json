@@ -1,10 +1,19 @@
 {
   "sourceBranch": "main",
-  "deploymentMarker": "2026-08-05T17:25:00Z",
-  "release": "canonical-identity-graph-v1",
+  "deploymentMarker": "2026-08-06T20:12:00-04:00",
+  "release": "sgtm-generate-lead-v1",
   "identityGraphVersion": "1.0.0",
   "dataLayerSchema": "measurement_stack.event@1.0.0",
   "d1Migrations": ["0001_identity_resolution.sql", "0002_canonical_identity_graph.sql"],
+  "serverSideTracking": {
+    "provider": "Stape sGTM",
+    "client": "Data Client",
+    "path": "/data",
+    "protocolVersion": 2,
+    "generateLead": true,
+    "eventIdDeduplication": true,
+    "consentAwareMatchData": true
+  },
   "networkPolicy": {
     "ip": "anonymize_strict",
     "javascriptClientId": "first_party_uuid",
