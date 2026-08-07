@@ -54,6 +54,15 @@ export async function onRequestPost(context) {
     });
 
     const serverEvent = await buildGenerateLeadServerEvent({ lead, tracking, request });
+    const analyticsMeasurementAllowed = serverEvent.analytics_storage === 'granted';
+    const serverMeasurementAllowed = analyticsMeasurementAllowed || serverEvent.advertising_measurement_consent;
+    const sgtmDelivery = serverMeasurementAllowed
+      ? sendServerEvent(env, serverEvent)
+      : Promise.resolve({
+          configured: Boolean(env.SGTM_EVENT_ENDPOINT),
+          delivered: false,
+          skipped: 'consent_denied',
+        });
 
     const deliveries = await Promise.all([
       settleDelivery('loops', sendLoopsEvent(env, {
@@ -94,7 +103,7 @@ export async function onRequestPost(context) {
           utmContent: lead.attributionFields.utm_content,
         },
       })),
-      settleDelivery('sgtm', sendServerEvent(env, serverEvent)),
+      settleDelivery('sgtm', sgtmDelivery),
       settleDelivery('webhook', sendGenericWebhook(env, { source: 'measurement_stack_leadgen', lead })),
     ]);
 
@@ -104,6 +113,7 @@ export async function onRequestPost(context) {
       eventId: lead.eventId,
       personId: lead.identity.person_id,
       authenticated: authResult.isAuthenticated,
+      analyticsMeasurementAllowed,
       advertisingMeasurementConsent: serverEvent.advertising_measurement_consent,
       stored: storage.configured,
       graphStored: graphStorage.stored,
