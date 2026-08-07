@@ -30,8 +30,11 @@ test('generate_lead server payload keeps the shared event ID and consent gates m
   assert.match(conversion, /if \(advertisingGranted\)/);
 });
 
-test('lead API sends the authoritative conversion to sGTM', async () => {
+test('lead API sends the authoritative conversion to sGTM only with measurement consent', async () => {
   const lead = await read('functions/api/lead.js');
   assert.match(lead, /buildGenerateLeadServerEvent/);
-  assert.match(lead, /settleDelivery\('sgtm', sendServerEvent\(env, serverEvent\)\)/);
+  assert.match(lead, /serverMeasurementAllowed/);
+  assert.match(lead, /\? sendServerEvent\(env, serverEvent\)/);
+  assert.match(lead, /settleDelivery\('sgtm', sgtmDelivery\)/);
+  assert.match(lead, /skipped: 'consent_denied'/);
 });

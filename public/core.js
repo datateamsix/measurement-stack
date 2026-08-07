@@ -13,6 +13,53 @@
     'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'utm_id',
     'gclid', 'dclid', 'gbraid', 'wbraid', 'fbclid', 'msclkid', 'li_fat_id',
   ];
+  const GOOGLE_CONSENT_DEFAULTS = Object.freeze({
+    ad_storage: false,
+    analytics_storage: false,
+    ad_user_data: false,
+    ad_personalization: false,
+    functionality_storage: false,
+    personalization_storage: false,
+    security_storage: true,
+  });
+  const CONSENT_OPTIONS = [
+    {
+      key: 'security_storage',
+      title: 'Security storage',
+      description: 'Supports authentication, fraud prevention, and other security-related functions.',
+      required: true,
+    },
+    {
+      key: 'functionality_storage',
+      title: 'Functionality storage',
+      description: 'Remembers choices that improve site features and functionality.',
+    },
+    {
+      key: 'personalization_storage',
+      title: 'Personalization storage',
+      description: 'Stores information used to personalize content and experiences.',
+    },
+    {
+      key: 'analytics_storage',
+      title: 'Analytics storage',
+      description: 'Allows analytics identifiers and cookies used to understand site usage.',
+    },
+    {
+      key: 'ad_storage',
+      title: 'Advertising storage',
+      description: 'Allows identifiers and cookies used for advertising measurement.',
+    },
+    {
+      key: 'ad_user_data',
+      title: 'Advertising user data',
+      description: 'Allows user data to be sent to Google for advertising purposes.',
+    },
+    {
+      key: 'ad_personalization',
+      title: 'Advertising personalization',
+      description: 'Allows data to be used for personalized advertising and remarketing.',
+    },
+  ];
 
   window.dataLayer = window.dataLayer || [];
   window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
@@ -50,7 +97,7 @@
     });
   }
 
-  const identityReady = loadScript('/identity-graph.js?v=20260805g')
+  const identityReady = loadScript('/identity-graph.js?v=20260807a')
     .then(() => window.MeasurementStackIdentity?.ready)
     .catch((error) => {
       console.error('Measurement Stack identity graph failed to load', error);
@@ -94,43 +141,167 @@
     return payload;
   }
 
+  function normalizeConsent(consent = {}) {
+    const analytics = typeof consent.analytics_storage === 'boolean'
+      ? consent.analytics_storage
+      : Boolean(consent.analytics);
+    const marketing = Boolean(consent.marketing);
+    const normalized = {
+      ...GOOGLE_CONSENT_DEFAULTS,
+      ad_storage: typeof consent.ad_storage === 'boolean' ? consent.ad_storage : marketing,
+      analytics_storage: analytics,
+      ad_user_data: typeof consent.ad_user_data === 'boolean' ? consent.ad_user_data : marketing,
+      ad_personalization: typeof consent.ad_personalization === 'boolean' ? consent.ad_personalization : marketing,
+      functionality_storage: Boolean(consent.functionality_storage),
+      personalization_storage: Boolean(consent.personalization_storage),
+      security_storage: true,
+    };
+    return {
+      ...consent,
+      ...normalized,
+      analytics: normalized.analytics_storage,
+      marketing: normalized.ad_storage || normalized.ad_user_data || normalized.ad_personalization,
+    };
+  }
+
+  function consentState(consent) {
+    const normalized = normalizeConsent(consent);
+    return Object.fromEntries(Object.keys(GOOGLE_CONSENT_DEFAULTS).map((key) => [
+      key,
+      normalized[key] ? 'granted' : 'denied',
+    ]));
+  }
+
   function setConsent(type, consent) {
     window.gtag('consent', type, {
-      analytics_storage: consent.analytics ? 'granted' : 'denied',
-      ad_storage: consent.marketing ? 'granted' : 'denied',
-      ad_user_data: consent.marketing ? 'granted' : 'denied',
-      ad_personalization: consent.marketing ? 'granted' : 'denied',
+      ...consentState(consent),
       ...(type === 'default' ? { wait_for_update: 500 } : {}),
     });
   }
 
-  function initializeConsent() {
-    const stored = parseJson(localStorage.getItem(STORAGE.consent));
-    setConsent('default', stored || { analytics: false, marketing: false });
-    const banner = document.getElementById('consent-banner');
-    if (!banner) return;
-    if (!stored) banner.hidden = false;
+  function ensureConsentDialog() {
+    let dialog = document.getElementById('consent-settings-dialog');
+    if (dialog) return dialog;
+    const options = CONSENT_OPTIONS.map((option) => `
+      <div class="consent-option">
+        <div>
+          <label for="consent-${option.key}">${escapeHtml(option.title)}</label>
+          <code>${escapeHtml(option.key)}</code>
+          <p>${escapeHtml(option.description)}</p>
+        </div>
+        <label class="consent-switch">
+          <span class="sr-only">${escapeHtml(option.title)}</span>
+          <input id="consent-${option.key}" name="${option.key}" type="checkbox"${option.required ? ' checked disabled' : ''}>
+          <span aria-hidden="true"></span>
+        </label>
+      </div>`).join('');
+    document.body.insertAdjacentHTML('beforeend', `
+      <div class="consent-dialog-backdrop" id="consent-settings-dialog" hidden>
+        <section class="consent-dialog" role="dialog" aria-modal="true" aria-labelledby="consent-dialog-title" tabindex="-1">
+          <header>
+            <div><p class="eyebrow">Privacy choices</p><h2 id="consent-dialog-title">Consent settings</h2></div>
+            <button class="consent-dialog-close" type="button" aria-label="Close consent settings">&times;</button>
+          </header>
+          <div class="consent-dialog-intro">
+            <p>Choose how this site may use storage and data. Each setting maps directly to a Google Consent Mode consent type.</p>
+          </div>
+          <form id="consent-settings-form">
+            <div class="consent-option-list">${options}</div>
+            <div class="consent-dialog-actions">
+              <button type="button" data-consent-action="reject">Reject optional</button>
+              <button type="button" data-consent-action="accept">Accept all</button>
+              <button class="consent-save" type="submit">Save choices</button>
+            </div>
+          </form>
+        </section>
+      </div>`);
+    return document.getElementById('consent-settings-dialog');
+  }
 
-    function choose(consent) {
-      const graphConsent = window.MeasurementStackIdentity?.updateConsent(consent);
-      if (!graphConsent) localStorage.setItem(STORAGE.consent, JSON.stringify(consent));
-      setConsent('update', consent);
+  function initializeConsent() {
+    const storedRaw = parseJson(localStorage.getItem(STORAGE.consent));
+    const stored = storedRaw ? normalizeConsent(storedRaw) : null;
+    setConsent('default', stored || GOOGLE_CONSENT_DEFAULTS);
+    const banner = document.getElementById('consent-banner');
+    const dialog = ensureConsentDialog();
+    const dialogPanel = dialog.querySelector('.consent-dialog');
+    const form = dialog.querySelector('#consent-settings-form');
+    let returnFocus = null;
+    if (banner && !stored) banner.hidden = false;
+
+    function choose(consent, source = 'banner') {
+      const normalized = normalizeConsent(consent);
+      const graphConsent = window.MeasurementStackIdentity?.updateConsent(normalized);
+      if (!graphConsent) localStorage.setItem(STORAGE.consent, JSON.stringify(normalized));
+      setConsent('update', normalized);
+      const state = consentState(normalized);
       track('consent_update', {
-        analytics_consent: consent.analytics ? 'granted' : 'denied',
-        marketing_consent: consent.marketing ? 'granted' : 'denied',
+        consent_source: source,
+        ...state,
+        analytics_consent: state.analytics_storage,
+        marketing_consent: normalized.marketing ? 'granted' : 'denied',
         consent_snapshot_id: graphConsent?.consent_snapshot_id || '',
       });
-      banner.hidden = true;
+      if (banner) banner.hidden = true;
+      closeDialog();
+    }
+
+    function populateDialog(consent = stored || GOOGLE_CONSENT_DEFAULTS) {
+      const normalized = normalizeConsent(consent);
+      CONSENT_OPTIONS.forEach(({ key, required }) => {
+        const input = form.elements.namedItem(key);
+        if (input) input.checked = required || normalized[key];
+      });
+    }
+
+    function openDialog(trigger) {
+      returnFocus = trigger || document.activeElement;
+      populateDialog(parseJson(localStorage.getItem(STORAGE.consent)) || stored || GOOGLE_CONSENT_DEFAULTS);
+      dialog.hidden = false;
+      document.body.classList.add('consent-dialog-open');
+      dialogPanel.focus();
+    }
+
+    function closeDialog() {
+      if (dialog.hidden) return;
+      dialog.hidden = true;
+      document.body.classList.remove('consent-dialog-open');
+      returnFocus?.focus?.();
     }
 
     document.getElementById('essential-only')?.addEventListener('click', () => choose({
-      analytics: false,
-      marketing: false,
-    }));
-    document.getElementById('accept-measurement')?.addEventListener('click', () => choose({
-      analytics: true,
-      marketing: true,
-    }));
+      ...GOOGLE_CONSENT_DEFAULTS,
+    }, 'banner_reject'));
+    document.getElementById('accept-measurement')?.addEventListener('click', () => choose(
+      Object.fromEntries(Object.keys(GOOGLE_CONSENT_DEFAULTS).map((key) => [key, true])),
+      'banner_accept',
+    ));
+    document.querySelectorAll('[data-consent-settings]').forEach((trigger) => {
+      trigger.addEventListener('click', () => openDialog(trigger));
+    });
+    dialog.querySelector('.consent-dialog-close').addEventListener('click', closeDialog);
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog) closeDialog();
+    });
+    dialog.querySelector('[data-consent-action="reject"]').addEventListener('click', () => {
+      choose(GOOGLE_CONSENT_DEFAULTS, 'settings_reject');
+    });
+    dialog.querySelector('[data-consent-action="accept"]').addEventListener('click', () => {
+      choose(
+        Object.fromEntries(Object.keys(GOOGLE_CONSENT_DEFAULTS).map((key) => [key, true])),
+        'settings_accept',
+      );
+    });
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      choose(Object.fromEntries(CONSENT_OPTIONS.map(({ key, required }) => [
+        key,
+        required || Boolean(form.elements.namedItem(key)?.checked),
+      ])), 'settings');
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !dialog.hidden) closeDialog();
+    });
   }
 
   function currentTouch() {
@@ -345,5 +516,6 @@
     recordBilling: (...args) => window.MeasurementStackIdentity?.recordBilling(...args),
     refreshNetworkContext: () => window.MeasurementStackIdentity?.refreshNetworkContext(),
     IDENTITY_STORAGE: () => window.MeasurementStackIdentity?.STORAGE || {},
+    openConsentSettings: () => document.querySelector('[data-consent-settings]')?.click(),
   };
 })();

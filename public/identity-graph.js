@@ -91,8 +91,15 @@
 
   function currentConsent() {
     const stored = parseJson(localStorage.getItem(LEGACY.consent), null);
-    const analytics = Boolean(stored?.analytics);
+    const analytics = typeof stored?.analytics_storage === 'boolean'
+      ? stored.analytics_storage
+      : Boolean(stored?.analytics);
     const marketing = Boolean(stored?.marketing);
+    const adStorage = typeof stored?.ad_storage === 'boolean' ? stored.ad_storage : marketing;
+    const adUserData = typeof stored?.ad_user_data === 'boolean' ? stored.ad_user_data : marketing;
+    const adPersonalization = typeof stored?.ad_personalization === 'boolean'
+      ? stored.ad_personalization
+      : marketing;
     let snapshotId = stored?.consent_snapshot_id || sessionStorage.getItem('measurementstack.default_consent_snapshot');
     if (!snapshotId) {
       snapshotId = id('consent');
@@ -101,9 +108,12 @@
     return {
       consent_snapshot_id: snapshotId,
       analytics_storage: analytics ? 'granted' : 'denied',
-      ad_storage: marketing ? 'granted' : 'denied',
-      ad_user_data: marketing ? 'granted' : 'denied',
-      ad_personalization: marketing ? 'granted' : 'denied',
+      ad_storage: adStorage ? 'granted' : 'denied',
+      ad_user_data: adUserData ? 'granted' : 'denied',
+      ad_personalization: adPersonalization ? 'granted' : 'denied',
+      functionality_storage: stored?.functionality_storage ? 'granted' : 'denied',
+      personalization_storage: stored?.personalization_storage ? 'granted' : 'denied',
+      security_storage: 'granted',
       identity_resolution: 'granted',
       captured_at: stored?.captured_at || nowIso(),
       policy_version: VERSION
@@ -111,10 +121,26 @@
   }
 
   function updateConsent(consent) {
+    const analytics = typeof consent.analytics_storage === 'boolean'
+      ? consent.analytics_storage
+      : Boolean(consent.analytics);
+    const legacyMarketing = Boolean(consent.marketing);
+    const adStorage = typeof consent.ad_storage === 'boolean' ? consent.ad_storage : legacyMarketing;
+    const adUserData = typeof consent.ad_user_data === 'boolean' ? consent.ad_user_data : legacyMarketing;
+    const adPersonalization = typeof consent.ad_personalization === 'boolean'
+      ? consent.ad_personalization
+      : legacyMarketing;
     const snapshot = {
       consent_snapshot_id: id('consent'),
-      analytics: Boolean(consent.analytics),
-      marketing: Boolean(consent.marketing),
+      analytics,
+      marketing: adStorage || adUserData || adPersonalization,
+      analytics_storage: analytics,
+      ad_storage: adStorage,
+      ad_user_data: adUserData,
+      ad_personalization: adPersonalization,
+      functionality_storage: Boolean(consent.functionality_storage),
+      personalization_storage: Boolean(consent.personalization_storage),
+      security_storage: true,
       captured_at: nowIso(),
       policy_version: VERSION
     };

@@ -21,6 +21,22 @@ The browser stores only pseudonymous identifiers, approved attribution context, 
 
 Legacy MeasureStack keys are retained as compatibility aliases while the sandbox transitions to the versioned envelopes.
 
+## Google consent settings
+
+The footer **Consent settings** link opens a persistent preference dialog. Its controls map one-to-one to Google Consent Mode rather than combining independent advertising signals into a single marketing category.
+
+| Preference | Google consent type | Initial state |
+| --- | --- | --- |
+| Security storage | `security_storage` | Granted and always active |
+| Functionality storage | `functionality_storage` | Denied |
+| Personalization storage | `personalization_storage` | Denied |
+| Analytics storage | `analytics_storage` | Denied |
+| Advertising storage | `ad_storage` | Denied |
+| Advertising user data | `ad_user_data` | Denied |
+| Advertising personalization | `ad_personalization` | Denied |
+
+The stored object retains the legacy `analytics` and `marketing` booleans for compatibility, but the seven Google consent types are authoritative. Every saved change sends `gtag('consent', 'update', ...)` and pushes a `consent_update` event with the same states into `dataLayer`.
+
 ## Collection policy
 
 The parameter inventory is represented as a policy rather than indiscriminately copied into every event.
