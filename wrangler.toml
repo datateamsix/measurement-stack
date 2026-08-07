@@ -8,6 +8,8 @@ STRIPE_GROWTH_PRICE_ID = "price_1U172MABkQitbRJZFiwrihDp"
 STRIPE_SCALE_PRICE_ID = "price_1U172vABkQitbRJZs8QGyEPN"
 IP_ANONYMIZATION_MODE = "anonymize_strict"
 JS_CLIENT_ID_MODE = "first_party_uuid"
+SGTM_EVENT_ENDPOINT = "https://edge.measurementstack.com/data"
+SGTM_PROTOCOL_VERSION = "2"
 
 [[d1_databases]]
 binding = "DB"
