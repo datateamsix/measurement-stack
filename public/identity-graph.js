@@ -5,7 +5,6 @@
   const RETENTION_DAYS = 395;
   const MAX_RECENT_TOUCHES = 12;
   const LEGACY = {
-    consent: 'meridian_consent_v1',
     attribution: 'measurementstack_attribution_v1',
     person: 'measurementstack_person_id',
     analyticsUser: 'measurementstack_analytics_user_id',
@@ -89,67 +88,56 @@
     return safeText(rawGaCookie, 200).match(/^GA\d+\.\d+\.(\d+\.\d+)$/)?.[1] || '';
   }
 
+  const isGranted = (value) => value === true || value === 'granted';
+
   function currentConsent() {
-    const stored = parseJson(localStorage.getItem(LEGACY.consent), null);
-    const analytics = typeof stored?.analytics_storage === 'boolean'
-      ? stored.analytics_storage
-      : Boolean(stored?.analytics);
-    const marketing = Boolean(stored?.marketing);
-    const adStorage = typeof stored?.ad_storage === 'boolean' ? stored.ad_storage : marketing;
-    const adUserData = typeof stored?.ad_user_data === 'boolean' ? stored.ad_user_data : marketing;
-    const adPersonalization = typeof stored?.ad_personalization === 'boolean'
-      ? stored.ad_personalization
-      : marketing;
-    let snapshotId = stored?.consent_snapshot_id || sessionStorage.getItem('measurementstack.default_consent_snapshot');
+    const meridian = window.MeridianConsent?.getState?.();
+    const states = meridian?.states || {};
+    let snapshotId = meridian?.revision_id || sessionStorage.getItem('measurementstack.default_consent_snapshot');
     if (!snapshotId) {
       snapshotId = id('consent');
       sessionStorage.setItem('measurementstack.default_consent_snapshot', snapshotId);
     }
     return {
       consent_snapshot_id: snapshotId,
-      analytics_storage: analytics ? 'granted' : 'denied',
-      ad_storage: adStorage ? 'granted' : 'denied',
-      ad_user_data: adUserData ? 'granted' : 'denied',
-      ad_personalization: adPersonalization ? 'granted' : 'denied',
-      functionality_storage: stored?.functionality_storage ? 'granted' : 'denied',
-      personalization_storage: stored?.personalization_storage ? 'granted' : 'denied',
+      meridian_consent_id: meridian?.consent_id || '',
+      meridian_revision_id: meridian?.revision_id || '',
+      has_choice: Boolean(meridian?.has_choice),
+      analytics_storage: isGranted(states.analytics_storage) ? 'granted' : 'denied',
+      ad_storage: isGranted(states.ad_storage) ? 'granted' : 'denied',
+      ad_user_data: isGranted(states.ad_user_data) ? 'granted' : 'denied',
+      ad_personalization: isGranted(states.ad_personalization) ? 'granted' : 'denied',
+      functionality_storage: isGranted(states.functionality_storage) ? 'granted' : 'denied',
+      personalization_storage: isGranted(states.personalization_storage) ? 'granted' : 'denied',
       security_storage: 'granted',
       identity_resolution: 'granted',
-      captured_at: stored?.captured_at || nowIso(),
-      policy_version: VERSION
+      captured_at: meridian?.occurred_at || nowIso(),
+      policy_version: meridian?.policy_version || VERSION
     };
   }
 
   function updateConsent(consent) {
-    const analytics = typeof consent.analytics_storage === 'boolean'
-      ? consent.analytics_storage
-      : Boolean(consent.analytics);
-    const legacyMarketing = Boolean(consent.marketing);
-    const adStorage = typeof consent.ad_storage === 'boolean' ? consent.ad_storage : legacyMarketing;
-    const adUserData = typeof consent.ad_user_data === 'boolean' ? consent.ad_user_data : legacyMarketing;
-    const adPersonalization = typeof consent.ad_personalization === 'boolean'
-      ? consent.ad_personalization
-      : legacyMarketing;
     const snapshot = {
-      consent_snapshot_id: id('consent'),
-      analytics,
-      marketing: adStorage || adUserData || adPersonalization,
-      analytics_storage: analytics,
-      ad_storage: adStorage,
-      ad_user_data: adUserData,
-      ad_personalization: adPersonalization,
-      functionality_storage: Boolean(consent.functionality_storage),
-      personalization_storage: Boolean(consent.personalization_storage),
-      security_storage: true,
-      captured_at: nowIso(),
-      policy_version: VERSION
+      consent_snapshot_id: safeText(consent.revision_id, 100) || id('consent'),
+      meridian_consent_id: safeText(consent.consent_id, 100),
+      meridian_revision_id: safeText(consent.revision_id, 100),
+      has_choice: Boolean(consent.has_choice),
+      analytics_storage: isGranted(consent.analytics_storage) ? 'granted' : 'denied',
+      ad_storage: isGranted(consent.ad_storage) ? 'granted' : 'denied',
+      ad_user_data: isGranted(consent.ad_user_data) ? 'granted' : 'denied',
+      ad_personalization: isGranted(consent.ad_personalization) ? 'granted' : 'denied',
+      functionality_storage: isGranted(consent.functionality_storage) ? 'granted' : 'denied',
+      personalization_storage: isGranted(consent.personalization_storage) ? 'granted' : 'denied',
+      security_storage: 'granted',
+      identity_resolution: 'granted',
+      captured_at: consent.occurred_at || nowIso(),
+      policy_version: safeText(consent.policy_version, 50) || VERSION
     };
-    localStorage.setItem(LEGACY.consent, JSON.stringify(snapshot));
     const identity = identityEnvelope();
     identity.consent_snapshot_id = snapshot.consent_snapshot_id;
     identity.updated_at = snapshot.captured_at;
     writeLocal(STORAGE.identity, identity);
-    return currentConsent();
+    return snapshot;
   }
 
   function referrerHost(value) {

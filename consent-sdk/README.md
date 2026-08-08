@@ -129,7 +129,7 @@ Both use the same versioned envelope:
   event: 'meridian_consent_updated',
   meridian_consent: {
     schema_version: '1.0',
-    sdk_version: '0.1.0',
+    sdk_version: '0.1.1',
     policy_version: '1.0',
     consent_id: 'c59e7b09-...',
     revision_id: 'ad722e36-...',
@@ -183,6 +183,7 @@ Set `window.MeridianConsentConfig` before loading the SDK or pass the same shape
 |---|---:|---|
 | `policyVersion` | `1.0` | Invalidates an older saved choice and requests consent again |
 | `cookieName` | `meridian_consent` | First-party preference cookie name |
+| `legacyStorageKey` | `meridian_consent_v1` | One-time migration source for the previous site consent choice; set empty to disable |
 | `cookieDays` | `180` | Preference lifetime |
 | `waitForUpdate` | `500` | Google Consent Mode wait in milliseconds |
 | `googleConsent` | `true` | Directly issue Google consent commands |
@@ -256,7 +257,7 @@ The compressed JavaScript and CSS have a combined 12 KB gzip budget. The budget 
 
 - Treat `schema_version` as a public data contract; only change it for breaking payload changes.
 - Increment `policyVersion` when the disclosure or purposes materially change and renewed consent is required.
-- Keep SDK versions immutable on the CDN (`/consent/0.1.0/...`) and use a separately controlled alias only if rollback is immediate.
+- Keep SDK versions immutable on the CDN (`/consent/0.1.1/...`) and use a separately controlled alias only if rollback is immediate.
 - Test accept, reject, granular save, stored restore, withdrawal, keyboard navigation, and every vendor request in GTM Preview before publishing.
 - Review GTM Consent Overview so each non-Google tag declares its additional consent checks.
 

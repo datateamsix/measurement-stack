@@ -7,25 +7,15 @@
   <meta name="theme-color" content="#17113f">
   <link rel="icon" href="/favicon.svg">
   <link rel="stylesheet" href="/styles.css?v=20260807a">
+  <link rel="stylesheet" href="/consent/meridian-consent.min.css?v=0.1.1">
   <title>Pricing | Measurement Stack</title>
   <script>
-    window.dataLayer = window.dataLayer || [];
-    window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
-    (function () {
-      let consent = {};
-      try { consent = JSON.parse(localStorage.getItem('meridian_consent_v1')) || consent; } catch (_) {}
-      window.gtag('consent', 'default', {
-        analytics_storage: (consent.analytics_storage ?? consent.analytics) ? 'granted' : 'denied',
-        ad_storage: (consent.ad_storage ?? consent.marketing) ? 'granted' : 'denied',
-        ad_user_data: (consent.ad_user_data ?? consent.marketing) ? 'granted' : 'denied',
-        ad_personalization: (consent.ad_personalization ?? consent.marketing) ? 'granted' : 'denied',
-        functionality_storage: consent.functionality_storage ? 'granted' : 'denied',
-        personalization_storage: consent.personalization_storage ? 'granted' : 'denied',
-        security_storage: 'granted',
-        wait_for_update: 500
-      });
-    })();
+    window.MeridianConsentConfig = {
+      policyVersion: '1.0', googleConsent: true, waitForUpdate: 500,
+      copy: { title: 'Consent settings', bannerText: 'Choose whether this measurement sandbox may use analytics, advertising, personalization, and functionality storage. Essential security functions remain active.' }
+    };
   </script>
+  <script src="/consent/meridian-consent.min.js?v=0.1.1"></script>
   <!-- Google Tag Manager -->
   <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
   new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -96,8 +86,7 @@
     </section>
   </main>
 
-  <footer><div class="section-shell footer-inner"><a class="brand" href="/" aria-label="Measurement Stack home"><span>Measurement Stack</span></a><p>The attribution and identity resolution OS for your business.</p><div class="footer-legal"><span>© 2026 Measurement Stack</span><button type="button" class="consent-settings-link" data-consent-settings>Consent settings</button></div></div></footer>
-  <aside class="consent-banner" id="consent-banner" aria-label="Cookie preferences" hidden><div><strong>Measurement sandbox</strong><p>Choose whether this demo may load analytics and advertising tags. Essential account and checkout functions remain available either way.</p></div><div class="consent-actions"><button type="button" id="essential-only">Essential only</button><button type="button" data-consent-settings>Manage settings</button><button type="button" class="consent-accept" id="accept-measurement">Accept measurement</button></div></aside>
+  <footer><div class="section-shell footer-inner"><a class="brand" href="/" aria-label="Measurement Stack home"><span>Measurement Stack</span></a><p>The attribution and identity resolution OS for your business.</p><div class="footer-legal"><span>© 2026 Measurement Stack</span><button type="button" class="consent-settings-link" data-meridian-consent-settings>Consent settings</button></div></div></footer>
   <script src="/core.js?v=20260807a" defer></script>
   <script src="/pricing.js?v=20260805g" defer></script>
 </body>

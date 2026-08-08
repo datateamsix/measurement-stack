@@ -20,7 +20,6 @@ body,
 
 /* The author stylesheet previously overrode the native [hidden] behavior. */
 [hidden],
-.consent-banner[hidden],
 .form-success[hidden],
 .submit-error[hidden] { display: none !important; }
 
@@ -194,23 +193,6 @@ select:focus {
 .event-stream article { background: #f5f5ff; }
 
 .test-note { border-color: #a8a1e8; background: #f0efff; }
-
-.consent-banner {
-  border-color: rgba(147, 197, 253, 0.24);
-  color: #ffffff;
-  background: rgba(17, 14, 48, 0.98);
-  box-shadow: 0 22px 60px rgba(17, 14, 48, 0.34);
-}
-.consent-banner p { color: #c4c7dc; }
-.consent-actions button {
-  border-color: #68638f;
-  color: #f8fafc;
-}
-.consent-actions .consent-accept {
-  border-color: transparent;
-  color: #ffffff;
-  background: linear-gradient(135deg, #7c3aed, #2563eb);
-}
 
 @media (max-width: 980px) {
   .brand { width: 230px; }

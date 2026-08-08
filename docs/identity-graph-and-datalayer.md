@@ -8,7 +8,7 @@ The GA4 `user_id` projection is the opaque `analytics_user_id`, not an email, Cl
 
 ## Browser storage
 
-The browser stores only pseudonymous identifiers, approved attribution context, consent state, and lifecycle references. It never stores names, raw email, raw phone, OAuth credentials, session tokens, or payment details.
+The browser stores only pseudonymous identifiers, approved attribution context, consent state, and lifecycle references. It never stores names, raw email, raw phone, OAuth credentials, session tokens, or payment details. Meridian Consent stores the active choice in a first-party cookie; the identity graph reads that state through the SDK API.
 
 | localStorage key | Purpose |
 | --- | --- |
@@ -17,7 +17,8 @@ The browser stores only pseudonymous identifiers, approved attribution context, 
 | `measurementstack.lifecycle.v1` | Visitor, lead, checkout, customer, and subscription transitions |
 | `measurementstack.network.v1` | Latest privacy-reduced network observation only |
 | `measurementstack.collection_policy.v1` | Active minimization and collection rules |
-| `meridian_consent_v1` | Consent choice and immutable consent snapshot reference |
+
+The first-party `meridian_consent` cookie contains the seven consent states plus pseudonymous consent and revision IDs. A previous `meridian_consent_v1` local-storage choice is migrated once and then removed.
 
 The `measurementstack.*` envelopes are the canonical identity and lifecycle namespaces. Meridian Consent owns the separate consent namespace.
 
@@ -35,7 +36,7 @@ The footer **Consent settings** link opens a persistent preference dialog. Its c
 | Advertising user data | `ad_user_data` | Denied |
 | Advertising personalization | `ad_personalization` | Denied |
 
-The stored object retains the legacy `analytics` and `marketing` booleans for compatibility, but the seven Google consent types are authoritative. Every saved change sends `gtag('consent', 'update', ...)` and pushes a `consent_update` event with the same states into `dataLayer`.
+Meridian Consent establishes denied defaults synchronously before GTM. Every saved change sends `gtag('consent', 'update', ...)` and pushes `meridian_consent_updated`; initialization pushes `meridian_consent_ready`. Both events expose the same seven states under the `meridian_consent` data-layer object. The identity graph subscribes to the SDK and records the Meridian revision ID as its consent snapshot reference.
 
 ## Collection policy
 

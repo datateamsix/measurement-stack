@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '0.1.0';
+  const VERSION = '0.1.1';
   const SCHEMA_VERSION = '1.0';
   const CONSENT_TYPES = Object.freeze([
     'security_storage',
@@ -37,6 +37,7 @@
   });
   const DEFAULT_CONFIG = Object.freeze({
     cookieName: 'meridian_consent',
+    legacyStorageKey: 'meridian_consent_v1',
     cookieDays: 180,
     policyVersion: '1.0',
     waitForUpdate: 500,
@@ -130,12 +131,30 @@
 
   function storedChoice() {
     const stored = readCookie(config.cookieName);
-    if (!stored || stored.schema_version !== SCHEMA_VERSION || stored.policy_version !== config.policyVersion) return null;
-    return {
-      ...stored,
-      states: state(stored.states),
-      has_choice: true,
-    };
+    if (stored && stored.schema_version === SCHEMA_VERSION && stored.policy_version === config.policyVersion) {
+      return { ...stored, states: state(stored.states), has_choice: true };
+    }
+    return migrateLegacyChoice();
+  }
+
+  function migrateLegacyChoice() {
+    if (!config.legacyStorageKey) return null;
+    let legacy;
+    try { legacy = safeJson(localStorage.getItem(config.legacyStorageKey)); } catch (_) { return null; }
+    if (!legacy) return null;
+    const marketing = legacy.marketing === true;
+    const migrated = recordFor({
+      security_storage: 'granted',
+      functionality_storage: legacy.functionality_storage,
+      personalization_storage: legacy.personalization_storage,
+      analytics_storage: legacy.analytics_storage ?? legacy.analytics,
+      ad_storage: legacy.ad_storage ?? marketing,
+      ad_user_data: legacy.ad_user_data ?? marketing,
+      ad_personalization: legacy.ad_personalization ?? marketing,
+    }, true, { consent_id: legacy.consent_id || legacy.consent_snapshot_id });
+    writeCookie(migrated);
+    try { localStorage.removeItem(config.legacyStorageKey); } catch (_) {}
+    return migrated;
   }
 
   function callGoogle(command, states) {

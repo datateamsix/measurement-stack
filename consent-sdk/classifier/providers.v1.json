@@ -1,7 +1,7 @@
 {
   "$schema": "./provider-registry.schema.json",
   "schema_version": "1.0",
-  "registry_version": "1.0.0",
+  "registry_version": "1.0.1",
   "consent_types": [
     "security_storage",
     "functionality_storage",
@@ -20,7 +20,7 @@
       "required_consent": ["analytics_storage"],
       "enforcement": "built_in",
       "match": {
-        "tag_types": ["gaawe", "gaawc"],
+        "tag_types": ["gaawe", "gaawc", "googtag"],
         "name_contains": ["ga4", "google analytics"],
         "code_contains": ["gtag('config'", "gtag(\"config\"", "google-analytics.com/g/collect"]
       }

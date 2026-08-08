@@ -20,6 +20,7 @@ Measurement Stack is a fictitious SaaS product and practical measurement-enginee
 - Canonical sGTM relay for lead and purchase events
 - Browser/server deduplication using a shared `event_id`
 - Standalone **Meridian Consent** SDK, GTM starter kit, and container-classification CLI in [`consent-sdk/`](consent-sdk/README.md)
+- Production pages load Meridian Consent synchronously before GTM from `public/consent/`; rebuild and sync those browser assets with `npm run build:consent`
 
 ## Product pages
 

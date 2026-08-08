@@ -185,5 +185,5 @@ setup: |-
 
 ___NOTES___
 
-Meridian Consent Bridge 0.1.0. Run the default tag on Consent Initialization
+Meridian Consent Bridge 0.1.1. Run the default tag on Consent Initialization
 and the update tag on meridian_consent_updated.

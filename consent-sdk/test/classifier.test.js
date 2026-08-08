@@ -42,6 +42,21 @@ test('name-only evidence is visible but cannot be auto-recommended', () => {
   assert.equal(result.status, 'uncertain');
 });
 
+test('new Google tag type is classified as GA4 with built-in consent behavior', () => {
+  const one = structuredClone(fixture);
+  one.containerVersion.tag = [{
+    tagId: '8',
+    name: 'GTAG Config - G-D9X0GMC7HG',
+    type: 'googtag',
+    parameter: [{ type: 'TEMPLATE', key: 'tagId', value: 'G-D9X0GMC7HG' }],
+  }];
+  const result = scanContainer(one).tags[0];
+  assert.equal(result.provider_id, 'google.analytics.ga4');
+  assert.equal(result.confidence, 1);
+  assert.equal(result.enforcement, 'built_in');
+  assert.deepEqual(result.required_consent, ['analytics_storage']);
+});
+
 test('approval manifest blocks apply until every tag has an explicit decision', () => {
   const manifest = createApprovalManifest(scanContainer(fixture));
   assert.ok(manifest.decisions.every(({ decision }) => decision === 'pending'));

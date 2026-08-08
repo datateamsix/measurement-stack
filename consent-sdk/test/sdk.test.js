@@ -14,8 +14,9 @@ const TYPES = [
   'ad_personalization',
 ];
 
-function browser() {
+function browser(legacyChoice = null) {
   let cookie = '';
+  const storage = new Map(legacyChoice ? [['meridian_consent_v1', JSON.stringify(legacyChoice)]] : []);
   const dataLayer = [];
   const window = {
     dataLayer,
@@ -48,11 +49,15 @@ function browser() {
     Boolean,
     Set,
     TypeError,
+    localStorage: {
+      getItem(key) { return storage.get(key) || null; },
+      removeItem(key) { storage.delete(key); },
+    },
     encodeURIComponent,
     decodeURIComponent,
   });
   vm.runInContext(source, context);
-  return { window, document, dataLayer, cookie: () => cookie };
+  return { window, document, dataLayer, cookie: () => cookie, storage };
 }
 
 test('initializes denied-by-default before emitting the ready event', () => {
@@ -65,7 +70,7 @@ test('initializes denied-by-default before emitting the ready event', () => {
   assert.equal(defaultCommand[2].security_storage, 'granted');
   for (const type of TYPES.filter((type) => type !== 'security_storage')) assert.equal(defaultCommand[2][type], 'denied');
   assert.equal(ready.meridian_consent.has_choice, false);
-  assert.equal(window.MeridianConsent.version, '0.1.0');
+  assert.equal(window.MeridianConsent.version, '0.1.1');
 });
 
 test('saves a granular choice, updates Google, and emits one stable GTM envelope', () => {
@@ -101,4 +106,14 @@ test('subscription returns an unsubscribe function', () => {
   unsubscribe();
   window.MeridianConsent.acceptAll();
   assert.equal(calls, 1);
+});
+
+test('migrates the previous site choice into the Meridian cookie once', () => {
+  const { window, cookie, storage } = browser({ analytics: true, marketing: false });
+  const current = window.MeridianConsent.getState();
+  assert.equal(current.has_choice, true);
+  assert.equal(current.states.analytics_storage, 'granted');
+  assert.equal(current.states.ad_storage, 'denied');
+  assert.match(cookie(), /^meridian_consent=/);
+  assert.equal(storage.has('meridian_consent_v1'), false);
 });

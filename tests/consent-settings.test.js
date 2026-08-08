@@ -13,28 +13,36 @@ const consentTypes = [
   'security_storage',
 ];
 
-test('consent settings map one-to-one to every Google consent type', async () => {
+test('Meridian Consent is the only site consent runtime', async () => {
   const core = await read('public/core.js');
-  for (const type of consentTypes) assert.match(core, new RegExp(type));
-  assert.match(core, /security_storage:\s*true/);
-  assert.match(core, /gtag\('consent', type/);
-  assert.match(core, /consent_update/);
-  assert.match(core, /data-consent-settings/);
+  assert.match(core, /meridian\.getState/);
+  assert.match(core, /MeridianConsent.*subscribe|meridian\.subscribe/);
+  assert.doesNotMatch(core, /initializeConsent|consent_update|data-consent-settings|gtag\('consent'/);
 });
 
-test('every GTM page establishes all consent defaults before the container', async () => {
+test('every GTM page loads Meridian synchronously before the container', async () => {
   for (const page of ['index.html', 'pricing.html', 'sign-in.html', 'app.html', 'checkout-success.html']) {
     const html = await read(`public/${page}`);
-    const defaultsAt = html.indexOf("gtag('consent', 'default'");
+    const configAt = html.indexOf('window.MeridianConsentConfig');
+    const sdkAt = html.indexOf('/consent/meridian-consent.min.js');
     const gtmAt = html.indexOf('GTM-5MQ3QDNF');
-    assert.ok(defaultsAt >= 0 && defaultsAt < gtmAt, `${page} must establish defaults before GTM`);
-    for (const type of consentTypes) assert.match(html, new RegExp(type), `${page} is missing ${type}`);
-    assert.match(html, /data-consent-settings/, `${page} is missing the settings link`);
+    assert.ok(configAt >= 0 && configAt < sdkAt && sdkAt < gtmAt, `${page} must load Meridian before GTM`);
+    assert.match(html, /\/consent\/meridian-consent\.min\.css/);
+    assert.match(html, /data-meridian-consent-settings/, `${page} is missing the settings link`);
+    assert.doesNotMatch(html, /id="consent-banner"|data-consent-settings|gtag\('consent', 'default'/);
   }
 });
 
-test('identity graph persists granular consent while retaining compatibility aliases', async () => {
+test('identity graph consumes granular Meridian state without owning consent storage', async () => {
   const graph = await read('public/identity-graph.js');
   for (const type of consentTypes) assert.match(graph, new RegExp(type));
-  assert.match(graph, /marketing:\s*adStorage \|\| adUserData \|\| adPersonalization/);
+  assert.match(graph, /MeridianConsent\?\.getState/);
+  assert.match(graph, /meridian_revision_id/);
+  assert.doesNotMatch(graph, /LEGACY\.consent|localStorage\.setItem\(LEGACY\.consent/);
+});
+
+test('deployed consent assets exactly match the package build', async () => {
+  for (const asset of ['meridian-consent.min.js', 'meridian-consent.min.css']) {
+    assert.equal(await read(`public/consent/${asset}`), await read(`consent-sdk/dist/${asset}`));
+  }
 });
