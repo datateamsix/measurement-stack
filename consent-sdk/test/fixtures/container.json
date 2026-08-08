@@ -1,0 +1,60 @@
+{
+  "exportFormatVersion": 2,
+  "exportTime": "2026-08-07 20:00:00",
+  "containerVersion": {
+    "accountId": "123",
+    "containerId": "456",
+    "containerVersionId": "7",
+    "tag": [
+      {
+        "accountId": "123",
+        "containerId": "456",
+        "tagId": "1",
+        "name": "GA4 - Generate Lead",
+        "type": "gaawe",
+        "parameter": [{ "type": "TEMPLATE", "key": "eventName", "value": "generate_lead" }],
+        "firingTriggerId": ["10"]
+      },
+      {
+        "accountId": "123",
+        "containerId": "456",
+        "tagId": "2",
+        "name": "Meta - PageView",
+        "type": "html",
+        "parameter": [{ "type": "TEMPLATE", "key": "html", "value": "<script src=\"https://connect.facebook.net/en_US/fbevents.js\"></script><script>fbq('track','PageView')</script>" }],
+        "firingTriggerId": ["11"]
+      },
+      {
+        "accountId": "123",
+        "containerId": "456",
+        "tagId": "3",
+        "name": "Hotjar - Base",
+        "type": "html",
+        "parameter": [{ "type": "TEMPLATE", "key": "html", "value": "<script src=\"https://static.hotjar.com/c/hotjar-1.js\"></script>" }],
+        "firingTriggerId": ["12"]
+      },
+      {
+        "accountId": "123",
+        "containerId": "456",
+        "tagId": "4",
+        "name": "Custom - Internal Utility",
+        "type": "html",
+        "parameter": [{ "type": "TEMPLATE", "key": "html", "value": "<script>window.internalUtility = true</script>" }],
+        "firingTriggerId": ["13"]
+      },
+      {
+        "accountId": "123",
+        "containerId": "456",
+        "tagId": "5",
+        "name": "OneTrust CMP",
+        "type": "html",
+        "parameter": [{ "type": "TEMPLATE", "key": "html", "value": "<script src=\"https://cdn.cookielaw.org/consent/example.js\"></script>" }],
+        "firingTriggerId": ["2147479553"]
+      }
+    ],
+    "trigger": [
+      { "triggerId": "10", "name": "Generate lead", "type": "CUSTOM_EVENT" },
+      { "triggerId": "11", "name": "All Pages", "type": "PAGEVIEW" }
+    ]
+  }
+}

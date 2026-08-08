@@ -19,6 +19,7 @@ MeasureStack is a fictitious SaaS product and practical measurement-engineering 
 - Verified Stripe webhook and purchase event
 - Canonical sGTM relay for lead and purchase events
 - Browser/server deduplication using a shared `event_id`
+- Standalone **Meridian Consent** SDK, GTM starter kit, and container-classification CLI in [`consent-sdk/`](consent-sdk/README.md)
 
 ## Product pages
 

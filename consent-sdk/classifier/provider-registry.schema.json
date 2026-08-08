@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://meridian.measurestack.io/schemas/provider-registry.v1.json",
+  "title": "Meridian Consent provider registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "registry_version", "consent_types", "providers"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": "1.0" },
+    "registry_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "consent_types": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/consentType" }
+    },
+    "providers": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/provider" }
+    }
+  },
+  "$defs": {
+    "consentType": {
+      "enum": [
+        "security_storage",
+        "functionality_storage",
+        "personalization_storage",
+        "analytics_storage",
+        "ad_storage",
+        "ad_user_data",
+        "ad_personalization"
+      ]
+    },
+    "stringList": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "provider": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "provider", "product", "purposes", "required_consent", "enforcement", "match"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)+$" },
+        "provider": { "type": "string", "minLength": 1 },
+        "product": { "type": "string", "minLength": 1 },
+        "purposes": { "$ref": "#/$defs/stringList" },
+        "required_consent": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/consentType" }
+        },
+        "enforcement": { "enum": ["additional", "built_in", "essential"] },
+        "match": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "tag_types": { "$ref": "#/$defs/stringList" },
+            "name_contains": { "$ref": "#/$defs/stringList" },
+            "hostnames": { "$ref": "#/$defs/stringList" },
+            "code_contains": { "$ref": "#/$defs/stringList" }
+          },
+          "minProperties": 1
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,380 @@
+{
+  "$schema": "./provider-registry.schema.json",
+  "schema_version": "1.0",
+  "registry_version": "1.0.0",
+  "consent_types": [
+    "security_storage",
+    "functionality_storage",
+    "personalization_storage",
+    "analytics_storage",
+    "ad_storage",
+    "ad_user_data",
+    "ad_personalization"
+  ],
+  "providers": [
+    {
+      "id": "google.analytics.ga4",
+      "provider": "Google",
+      "product": "Google Analytics 4",
+      "purposes": ["analytics", "audience_measurement"],
+      "required_consent": ["analytics_storage"],
+      "enforcement": "built_in",
+      "match": {
+        "tag_types": ["gaawe", "gaawc"],
+        "name_contains": ["ga4", "google analytics"],
+        "code_contains": ["gtag('config'", "gtag(\"config\"", "google-analytics.com/g/collect"]
+      }
+    },
+    {
+      "id": "google.ads.conversion",
+      "provider": "Google",
+      "product": "Google Ads Conversion",
+      "purposes": ["advertising", "conversion_measurement"],
+      "required_consent": ["ad_storage", "ad_user_data"],
+      "enforcement": "built_in",
+      "match": {
+        "tag_types": ["awct"],
+        "name_contains": ["google ads conversion", "adwords conversion"],
+        "code_contains": ["googleadservices.com/pagead/conversion", "send_to: 'aw-", "send_to:\"aw-"]
+      }
+    },
+    {
+      "id": "google.ads.remarketing",
+      "provider": "Google",
+      "product": "Google Ads Remarketing",
+      "purposes": ["advertising", "remarketing", "personalization"],
+      "required_consent": ["ad_storage", "ad_user_data", "ad_personalization"],
+      "enforcement": "built_in",
+      "match": {
+        "tag_types": ["sp"],
+        "name_contains": ["google ads remarketing", "adwords remarketing"],
+        "code_contains": ["googleads.g.doubleclick.net/pagead/viewthroughconversion"]
+      }
+    },
+    {
+      "id": "google.floodlight",
+      "provider": "Google",
+      "product": "Floodlight",
+      "purposes": ["advertising", "conversion_measurement", "remarketing"],
+      "required_consent": ["ad_storage", "ad_user_data", "ad_personalization"],
+      "enforcement": "built_in",
+      "match": {
+        "tag_types": ["flc", "fls"],
+        "name_contains": ["floodlight"],
+        "hostnames": ["fls.doubleclick.net", "ad.doubleclick.net"]
+      }
+    },
+    {
+      "id": "meta.pixel",
+      "provider": "Meta",
+      "product": "Meta Pixel",
+      "purposes": ["advertising", "audience_measurement", "remarketing"],
+      "required_consent": ["ad_storage", "ad_user_data", "ad_personalization"],
+      "enforcement": "additional",
+      "match": {
+        "name_contains": ["meta pixel", "facebook pixel"],
+        "hostnames": ["connect.facebook.net", "www.facebook.com/tr"],
+        "code_contains": ["fbq(", "_fbq"]
+      }
+    },
+    {
+      "id": "linkedin.insight",
+      "provider": "LinkedIn",
+      "product": "LinkedIn Insight Tag",
+      "purposes": ["advertising", "audience_measurement", "remarketing"],
+      "required_consent": ["ad_storage", "ad_user_data", "ad_personalization"],
+      "enforcement": "additional",
+      "match": {
+        "name_contains": ["linkedin insight", "linkedin conversion"],
+        "hostnames": ["snap.licdn.com", "px.ads.linkedin.com"],
+        "code_contains": ["_linkedin_partner_id", "lintrk("]
+      }
+    },
+    {
+      "id": "microsoft.ads.uet",
+      "provider": "Microsoft",
+      "product": "Microsoft Advertising UET",
+      "purposes": ["advertising", "conversion_measurement", "remarketing"],
+      "required_consent": ["ad_storage", "ad_user_data", "ad_personalization"],
+      "enforcement": "additional",
+      "match": {
+        "name_contains": ["microsoft uet", "bing uet", "microsoft ads"],
+        "hostnames": ["bat.bing.com"],
+        "code_contains": ["uetq.push", "uetq ="]
+      }
+    },
+    {
+      "id": "tiktok.pixel",
+      "provider": "TikTok",
+      "product": "TikTok Pixel",
+      "purposes": ["advertising", "audience_measurement", "remarketing"],
+      "required_consent": ["ad_storage", "ad_user_data", "ad_personalization"],
+      "enforcement": "additional",
+      "match": {
+        "name_contains": ["tiktok pixel"],
+        "hostnames": ["analytics.tiktok.com", "business-api.tiktok.com"],
+        "code_contains": ["ttq.load", "ttq.track"]
+      }
+    },
+    {
+      "id": "pinterest.tag",
+      "provider": "Pinterest",
+      "product": "Pinterest Tag",
+      "purposes": ["advertising", "conversion_measurement", "remarketing"],
+      "required_consent": ["ad_storage", "ad_user_data", "ad_personalization"],
+      "enforcement": "additional",
+      "match": {
+        "name_contains": ["pinterest tag", "pinterest conversion"],
+        "hostnames": ["s.pinimg.com", "ct.pinterest.com"],
+        "code_contains": ["pintrk("]
+      }
+    },
+    {
+      "id": "snap.pixel",
+      "provider": "Snap",
+      "product": "Snap Pixel",
+      "purposes": ["advertising", "conversion_measurement", "remarketing"],
+      "required_consent": ["ad_storage", "ad_user_data", "ad_personalization"],
+      "enforcement": "additional",
+      "match": {
+        "name_contains": ["snap pixel", "snapchat pixel"],
+        "hostnames": ["sc-static.net", "tr.snapchat.com"],
+        "code_contains": ["snaptr("]
+      }
+    },
+    {
+      "id": "x.pixel",
+      "provider": "X",
+      "product": "X Pixel",
+      "purposes": ["advertising", "conversion_measurement", "remarketing"],
+      "required_consent": ["ad_storage", "ad_user_data", "ad_personalization"],
+      "enforcement": "additional",
+      "match": {
+        "name_contains": ["twitter pixel", "x pixel", "twitter conversion"],
+        "hostnames": ["static.ads-twitter.com", "analytics.twitter.com"],
+        "code_contains": ["twq("]
+      }
+    },
+    {
+      "id": "reddit.pixel",
+      "provider": "Reddit",
+      "product": "Reddit Pixel",
+      "purposes": ["advertising", "conversion_measurement", "remarketing"],
+      "required_consent": ["ad_storage", "ad_user_data", "ad_personalization"],
+      "enforcement": "additional",
+      "match": {
+        "name_contains": ["reddit pixel", "reddit conversion"],
+        "hostnames": ["www.redditstatic.com", "alb.reddit.com"],
+        "code_contains": ["rdt("]
+      }
+    },
+    {
+      "id": "hotjar.analytics",
+      "provider": "Hotjar",
+      "product": "Hotjar",
+      "purposes": ["analytics", "session_replay"],
+      "required_consent": ["analytics_storage"],
+      "enforcement": "additional",
+      "match": {
+        "name_contains": ["hotjar"],
+        "hostnames": ["static.hotjar.com", "script.hotjar.com"],
+        "code_contains": ["hjSettings", "hj("]
+      }
+    },
+    {
+      "id": "microsoft.clarity",
+      "provider": "Microsoft",
+      "product": "Microsoft Clarity",
+      "purposes": ["analytics", "session_replay"],
+      "required_consent": ["analytics_storage"],
+      "enforcement": "additional",
+      "match": {
+        "name_contains": ["microsoft clarity", "clarity"],
+        "hostnames": ["clarity.ms"],
+        "code_contains": ["clarity(\"set\"", "clarity('set'"]
+      }
+    },
+    {
+      "id": "fullstory.analytics",
+      "provider": "Fullstory",
+      "product": "Fullstory",
+      "purposes": ["analytics", "session_replay"],
+      "required_consent": ["analytics_storage"],
+      "enforcement": "additional",
+      "match": {
+        "name_contains": ["fullstory"],
+        "hostnames": ["edge.fullstory.com", "fullstory.com/s/fs.js"],
+        "code_contains": ["FS.identify", "_fs_org"]
+      }
+    },
+    {
+      "id": "mixpanel.analytics",
+      "provider": "Mixpanel",
+      "product": "Mixpanel",
+      "purposes": ["analytics", "product_analytics"],
+      "required_consent": ["analytics_storage"],
+      "enforcement": "additional",
+      "match": {
+        "name_contains": ["mixpanel"],
+        "hostnames": ["cdn.mxpnl.com", "api.mixpanel.com"],
+        "code_contains": ["mixpanel.init", "mixpanel.track"]
+      }
+    },
+    {
+      "id": "amplitude.analytics",
+      "provider": "Amplitude",
+      "product": "Amplitude Analytics",
+      "purposes": ["analytics", "product_analytics"],
+      "required_consent": ["analytics_storage"],
+      "enforcement": "additional",
+      "match": {
+        "name_contains": ["amplitude"],
+        "hostnames": ["cdn.amplitude.com", "api2.amplitude.com"],
+        "code_contains": ["amplitude.init", "amplitude.track"]
+      }
+    },
+    {
+      "id": "heap.analytics",
+      "provider": "Heap",
+      "product": "Heap Analytics",
+      "purposes": ["analytics", "product_analytics"],
+      "required_consent": ["analytics_storage"],
+      "enforcement": "additional",
+      "match": {
+        "name_contains": ["heap analytics", "heap"],
+        "hostnames": ["cdn.heapanalytics.com", "heapanalytics.com/api"],
+        "code_contains": ["heap.load", "heap.track"]
+      }
+    },
+    {
+      "id": "segment.analytics",
+      "provider": "Twilio Segment",
+      "product": "Segment Analytics.js",
+      "purposes": ["analytics", "data_collection"],
+      "required_consent": ["analytics_storage"],
+      "enforcement": "additional",
+      "match": {
+        "name_contains": ["segment analytics", "segment.io"],
+        "hostnames": ["cdn.segment.com", "api.segment.io"],
+        "code_contains": ["analytics.load", "analytics.track"]
+      }
+    },
+    {
+      "id": "hubspot.tracking",
+      "provider": "HubSpot",
+      "product": "HubSpot Tracking Code",
+      "purposes": ["analytics", "lead_generation"],
+      "required_consent": ["analytics_storage", "functionality_storage"],
+      "enforcement": "additional",
+      "match": {
+        "name_contains": ["hubspot tracking", "hubspot"],
+        "hostnames": ["js.hs-scripts.com", "js.hs-analytics.net"],
+        "code_contains": ["_hsq.push"]
+      }
+    },
+    {
+      "id": "marketo.munchkin",
+      "provider": "Adobe",
+      "product": "Marketo Munchkin",
+      "purposes": ["analytics", "lead_generation"],
+      "required_consent": ["analytics_storage", "functionality_storage"],
+      "enforcement": "additional",
+      "match": {
+        "name_contains": ["marketo munchkin", "munchkin"],
+        "hostnames": ["munchkin.marketo.net"],
+        "code_contains": ["Munchkin.init"]
+      }
+    },
+    {
+      "id": "salesforce.pardot",
+      "provider": "Salesforce",
+      "product": "Marketing Cloud Account Engagement (Pardot)",
+      "purposes": ["analytics", "lead_generation"],
+      "required_consent": ["analytics_storage", "functionality_storage"],
+      "enforcement": "additional",
+      "match": {
+        "name_contains": ["pardot", "account engagement"],
+        "hostnames": ["pi.pardot.com", "go.pardot.com"],
+        "code_contains": ["piAId", "piCId"]
+      }
+    },
+    {
+      "id": "intercom.messenger",
+      "provider": "Intercom",
+      "product": "Intercom Messenger",
+      "purposes": ["functionality", "customer_support"],
+      "required_consent": ["functionality_storage"],
+      "enforcement": "additional",
+      "match": {
+        "name_contains": ["intercom messenger", "intercom"],
+        "hostnames": ["widget.intercom.io", "js.intercomcdn.com"],
+        "code_contains": ["Intercom(", "intercomSettings"]
+      }
+    },
+    {
+      "id": "drift.chat",
+      "provider": "Drift",
+      "product": "Drift Chat",
+      "purposes": ["functionality", "customer_support"],
+      "required_consent": ["functionality_storage"],
+      "enforcement": "additional",
+      "match": {
+        "name_contains": ["drift chat", "drift"],
+        "hostnames": ["js.driftt.com"],
+        "code_contains": ["drift.load", "driftt"]
+      }
+    },
+    {
+      "id": "optimizely.web",
+      "provider": "Optimizely",
+      "product": "Optimizely Web Experimentation",
+      "purposes": ["personalization", "experimentation", "analytics"],
+      "required_consent": ["personalization_storage", "analytics_storage"],
+      "enforcement": "additional",
+      "match": {
+        "name_contains": ["optimizely"],
+        "hostnames": ["cdn.optimizely.com"],
+        "code_contains": ["optimizely.push"]
+      }
+    },
+    {
+      "id": "vwo.experimentation",
+      "provider": "VWO",
+      "product": "VWO Experimentation",
+      "purposes": ["personalization", "experimentation", "analytics"],
+      "required_consent": ["personalization_storage", "analytics_storage"],
+      "enforcement": "additional",
+      "match": {
+        "name_contains": ["vwo", "visual website optimizer"],
+        "hostnames": ["dev.visualwebsiteoptimizer.com"],
+        "code_contains": ["_vwo_code", "VWO.push"]
+      }
+    },
+    {
+      "id": "abtasty.experimentation",
+      "provider": "AB Tasty",
+      "product": "AB Tasty",
+      "purposes": ["personalization", "experimentation", "analytics"],
+      "required_consent": ["personalization_storage", "analytics_storage"],
+      "enforcement": "additional",
+      "match": {
+        "name_contains": ["ab tasty", "abtasty"],
+        "hostnames": ["try.abtasty.com", "ariane.abtasty.com"],
+        "code_contains": ["ABTasty"]
+      }
+    },
+    {
+      "id": "onetrust.cmp",
+      "provider": "OneTrust",
+      "product": "OneTrust CMP",
+      "purposes": ["security", "consent_management"],
+      "required_consent": ["security_storage"],
+      "enforcement": "essential",
+      "match": {
+        "name_contains": ["onetrust", "cookiepro"],
+        "hostnames": ["cdn.cookielaw.org", "cookie-cdn.cookiepro.com"],
+        "code_contains": ["OptanonWrapper", "OneTrust"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MeasureStack Consent example</title>
+  <link rel="stylesheet" href="../dist/measurestack-consent.min.css">
+  <script>
+    window.MeasureStackConsentConfig = {
+      policyVersion: '1.0',
+      privacyUrl: '/privacy',
+      cookieUrl: '/cookies'
+    };
+  </script>
+  <script src="../dist/measurestack-consent.min.js"></script>
+</head>
+<body>
+  <main>
+    <h1>MeasureStack Consent</h1>
+    <p>A dependency-free consent interface with a stable GTM contract.</p>
+    <button type="button" data-measurestack-consent-settings>Consent settings</button>
+  </main>
+</body>
+</html>

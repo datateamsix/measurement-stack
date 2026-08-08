@@ -1,0 +1,31 @@
+{
+  "name": "@meridian/consent",
+  "version": "0.1.0",
+  "description": "A lightweight consent runtime and auditable GTM governance toolkit for Meridian.",
+  "type": "module",
+  "private": true,
+  "files": [
+    "dist",
+    "gtm",
+    "classifier",
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "bin": {
+    "meridian-consent": "./bin/meridian-consent.js"
+  },
+  "exports": {
+    "./classifier": "./classifier/index.js",
+    "./registry": "./classifier/providers.v1.json"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test",
+    "scan:example": "node bin/meridian-consent.js scan test/fixtures/container.json",
+    "check:size": "node scripts/check-size.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}
