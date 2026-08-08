@@ -1,4 +1,4 @@
-# MeasureStack
+# Measurement Stack - Analytics OS Sandbox
 
 **The attribution and identity resolution OS for your business.**
 
