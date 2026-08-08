@@ -8,7 +8,7 @@ The design goal is deliberately narrow: establish consent before measurement, co
 
 - Maps the interface one-to-one to all seven Google consent types.
 - Denies optional consent by default; `security_storage` is always granted.
-- Persists a versioned first-party `ms_consent` cookie for 180 days by default.
+- Persists a versioned first-party `meridian_consent` cookie for 180 days by default.
 - updates Google Consent Mode directly or through the included native GTM template.
 - emits stable `dataLayer` events for conditional GTM triggers.
 - provides an accessible banner and settings dialog with keyboard focus management.
@@ -72,15 +72,15 @@ Strong technical evidence is weighted above naming conventions. A known native t
 Build the package and host the two files from `dist/` on your own domain. Place these lines **before the GTM container snippet**:
 
 ```html
-<link rel="stylesheet" href="/consent/measurestack-consent.min.css">
+<link rel="stylesheet" href="/consent/meridian-consent.min.css">
 <script>
-  window.MeasureStackConsentConfig = {
+  window.MeridianConsentConfig = {
     policyVersion: '1.0',
     privacyUrl: '/privacy',
     cookieUrl: '/cookies'
   };
 </script>
-<script src="/consent/measurestack-consent.min.js"></script>
+<script src="/consent/meridian-consent.min.js"></script>
 
 <!-- Google Tag Manager immediately follows -->
 ```
@@ -90,7 +90,7 @@ Do not add `async` or `defer` to the SDK script when using direct Google consent
 Add a persistent footer control anywhere in the page:
 
 ```html
-<button type="button" data-measurestack-consent-settings>
+<button type="button" data-meridian-consent-settings>
   Consent settings
 </button>
 ```
@@ -98,7 +98,7 @@ Add a persistent footer control anywhere in the page:
 The SDK discovers every matching control present when the UI mounts. You can also open it programmatically:
 
 ```js
-MeasureStackConsent.open();
+MeridianConsent.open();
 ```
 
 ## Consent map
@@ -119,15 +119,15 @@ The SDK emits exactly two lifecycle events:
 
 | Event | When it fires |
 |---|---|
-| `measurestack_consent_ready` | Once per page, after the stored choice or denied defaults are resolved |
-| `measurestack_consent_updated` | After a visitor or API action saves, rejects, accepts, withdraws, or resets consent |
+| `meridian_consent_ready` | Once per page, after the stored choice or denied defaults are resolved |
+| `meridian_consent_updated` | After a visitor or API action saves, rejects, accepts, withdraws, or resets consent |
 
 Both use the same versioned envelope:
 
 ```js
 {
-  event: 'measurestack_consent_updated',
-  measurestack_consent: {
+  event: 'meridian_consent_updated',
+  meridian_consent: {
     schema_version: '1.0',
     sdk_version: '0.1.0',
     policy_version: '1.0',
@@ -153,9 +153,9 @@ The object contains no email, IP address, GA client ID, user ID, or advertising 
 
 To fire a non-Google analytics vendor immediately after consent is granted:
 
-1. Create a Data Layer Variable named `DLV - MS Consent - Analytics Storage` with `measurestack_consent.analytics_storage` and Version 2.
-2. Create a Custom Event trigger matching `^measurestack_consent_(ready|updated)$` with regex matching enabled.
-3. Add the condition `DLV - MS Consent - Analytics Storage equals granted`.
+1. Create a Data Layer Variable named `DLV - Meridian Consent - Analytics Storage` with `meridian_consent.analytics_storage` and Version 2.
+2. Create a Custom Event trigger matching `^meridian_consent_(ready|updated)$` with regex matching enabled.
+3. Add the condition `DLV - Meridian Consent - Analytics Storage equals granted`.
 4. Add `analytics_storage` as the tag's additional consent requirement.
 
 The included GTM starter container creates this pattern for analytics and advertising tags automatically. See [`gtm/README.md`](gtm/README.md).
@@ -166,7 +166,7 @@ For the most native GTM integration, import the included custom template and let
 
 ```html
 <script>
-  window.MeasureStackConsentConfig = {
+  window.MeridianConsentConfig = {
     policyVersion: '1.0',
     googleConsent: false
   };
@@ -177,12 +177,12 @@ Then follow [`gtm/README.md`](gtm/README.md). Choose **either** direct Google co
 
 ## Configuration
 
-Set `window.MeasureStackConsentConfig` before loading the SDK or pass the same shape to `init()` if auto-initialization has been disabled in a future build.
+Set `window.MeridianConsentConfig` before loading the SDK or pass the same shape to `init()` if auto-initialization has been disabled in a future build.
 
 | Option | Default | Purpose |
 |---|---:|---|
 | `policyVersion` | `1.0` | Invalidates an older saved choice and requests consent again |
-| `cookieName` | `ms_consent` | First-party preference cookie name |
+| `cookieName` | `meridian_consent` | First-party preference cookie name |
 | `cookieDays` | `180` | Preference lifetime |
 | `waitForUpdate` | `500` | Google Consent Mode wait in milliseconds |
 | `googleConsent` | `true` | Directly issue Google consent commands |
@@ -198,7 +198,7 @@ Example brand configuration:
 
 ```html
 <script>
-  window.MeasureStackConsentConfig = {
+  window.MeridianConsentConfig = {
     policyVersion: '2026-08-07',
     privacyUrl: '/privacy',
     cookieDays: 180,
@@ -218,22 +218,22 @@ Example brand configuration:
 ## Public API
 
 ```js
-MeasureStackConsent.getState();
-MeasureStackConsent.has('analytics_storage');
-MeasureStackConsent.acceptAll();
-MeasureStackConsent.rejectOptional();
-MeasureStackConsent.save({
+MeridianConsent.getState();
+MeridianConsent.has('analytics_storage');
+MeridianConsent.acceptAll();
+MeridianConsent.rejectOptional();
+MeridianConsent.save({
   analytics_storage: 'granted',
   functionality_storage: 'granted',
   ad_storage: 'denied',
   ad_user_data: 'denied',
   ad_personalization: 'denied'
 });
-MeasureStackConsent.open();
-MeasureStackConsent.close();
-MeasureStackConsent.reset();
+MeridianConsent.open();
+MeridianConsent.close();
+MeridianConsent.reset();
 
-const unsubscribe = MeasureStackConsent.subscribe((consent) => {
+const unsubscribe = MeridianConsent.subscribe((consent) => {
   console.log(consent.analytics_storage);
 });
 ```

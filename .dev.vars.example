@@ -1,7 +1,7 @@
 # Public runtime configuration
-MEASURESTACK_ENVIRONMENT=development
+MEASUREMENT_STACK_ENVIRONMENT=development
 CLERK_PUBLISHABLE_KEY=pk_test_replace_me
-CLERK_AUTHORIZED_PARTIES=http://localhost:8788,https://measurestack-leadgen.pages.dev
+CLERK_AUTHORIZED_PARTIES=http://localhost:8788,https://measurement-stack-leadgen.pages.dev
 
 # Server-only secrets
 CLERK_SECRET_KEY=sk_test_replace_me
@@ -12,7 +12,7 @@ STRIPE_GROWTH_PRICE_ID=price_replace_me
 STRIPE_SCALE_PRICE_ID=price_replace_me
 
 # Optional server-side event relay
-SGTM_EVENT_ENDPOINT=https://sgtm.example.com/measurestack/events
+SGTM_EVENT_ENDPOINT=https://sgtm.example.com/measurementstack/events
 SGTM_BEARER_TOKEN=replace_me
 
 # Optional generic webhook destination

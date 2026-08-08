@@ -1,7 +1,7 @@
 export function onRequestGet({ env }) {
   return new Response(JSON.stringify({
     ok: true,
-    service: 'measurestack-leadgen',
+    service: 'measurement-stack-leadgen',
     webhookConfigured: Boolean(env.LEAD_WEBHOOK_URL),
     timestamp: new Date().toISOString(),
   }), {

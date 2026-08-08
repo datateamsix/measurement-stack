@@ -2,8 +2,8 @@
 
 This directory contains two optional GTM assets:
 
-- `measurestack-starter-container.json` — importable variables, triggers, and paused example tags.
-- `measurestack-consent-template.tpl` — a native GTM consent template that calls `setDefaultConsentState` and `updateConsentState`.
+- `meridian-consent-starter-container.json` — importable variables, triggers, and paused example tags.
+- `meridian-consent-template.tpl` — a native GTM consent template that calls `setDefaultConsentState` and `updateConsentState`.
 
 ## Import the starter container
 
@@ -22,26 +22,26 @@ The example tags are inert demonstrations. Copy their triggers and consent requi
 
 Use this only when you want GTM—not the browser SDK—to own Google Consent Mode calls.
 
-1. In **Templates → Tag Templates**, click **New → ⋮ → Import** and select `measurestack-consent-template.tpl`.
-2. Create a tag named `MeasureStack Consent - Default`.
+1. In **Templates → Tag Templates**, click **New → ⋮ → Import** and select `meridian-consent-template.tpl`.
+2. Create a tag named `Meridian Consent - Default`.
 3. Select **Default**, set the same policy version used by the SDK, set the wait to `500`, and fire on **Consent Initialization – All Pages**.
-4. Create a second tag named `MeasureStack Consent - Update`.
-5. Select **Update** and fire on `CE - MS Consent - Updated`.
+4. Create a second tag named `Meridian Consent - Update`.
+5. Select **Update** and fire on `CE - Meridian Consent - Updated`.
 6. Set `googleConsent: false` in the SDK configuration to prevent duplicate commands.
 7. Preview, test all choices, then publish.
 
-The template reads the `ms_consent` cookie during Consent Initialization and reads `measurestack_consent` from the data layer on updates. It uses GTM's native Consent APIs; it does not issue `gtag('consent', ...)` from Custom HTML.
+The template reads the `meridian_consent` cookie during Consent Initialization and reads `meridian_consent` from the data layer on updates. It uses GTM's native Consent APIs; it does not issue `gtag('consent', ...)` from Custom HTML.
 
 ## Conditional vendor tags
 
 For an analytics vendor tag:
 
-- firing trigger: `CE - MS Consent - Analytics Granted`;
+- firing trigger: `CE - Meridian Consent - Analytics Granted`;
 - additional consent check: `analytics_storage`.
 
 For an advertising vendor tag:
 
-- firing trigger: `CE - MS Consent - Advertising Granted`;
+- firing trigger: `CE - Meridian Consent - Advertising Granted`;
 - additional consent checks: `ad_storage`, `ad_user_data`, and `ad_personalization` as appropriate for the vendor and use case.
 
 Google tags already have built-in consent checks. Review the Consent Overview before publishing rather than duplicating their built-in behavior with trigger exceptions.

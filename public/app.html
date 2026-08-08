@@ -13,7 +13,7 @@
     window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
     (function () {
       let consent = {};
-      try { consent = JSON.parse(localStorage.getItem('measurestack_consent_v1')) || consent; } catch (_) {}
+      try { consent = JSON.parse(localStorage.getItem('meridian_consent_v1')) || consent; } catch (_) {}
       window.gtag('consent', 'default', {
         analytics_storage: (consent.analytics_storage ?? consent.analytics) ? 'granted' : 'denied',
         ad_storage: (consent.ad_storage ?? consent.marketing) ? 'granted' : 'denied',

@@ -9,12 +9,12 @@ ___INFO___
 
 {
   "type": "TAG",
-  "id": "cvt_measurestack_consent",
+  "id": "cvt_meridian_consent",
   "version": 1,
-  "displayName": "MeasureStack Consent Bridge",
+  "displayName": "Meridian Consent Bridge",
   "categories": ["UTILITY", "ANALYTICS", "ADVERTISING"],
-  "brand": {"id": "measurestack", "displayName": "MeasureStack"},
-  "description": "Applies MeasureStack's stored or dataLayer consent state through GTM's native Consent APIs.",
+  "brand": {"id": "meridian", "displayName": "Meridian"},
+  "description": "Applies Meridian Consent's stored or dataLayer consent state through GTM's native Consent APIs.",
   "containerContexts": ["WEB"]
 }
 
@@ -26,8 +26,8 @@ ___TEMPLATE_PARAMETERS___
     "name": "command",
     "displayName": "Consent command",
     "selectItems": [
-      {"value": "default", "displayValue": "Default: read ms_consent cookie"},
-      {"value": "update", "displayValue": "Update: read MeasureStack dataLayer object"}
+      {"value": "default", "displayValue": "Default: read meridian_consent cookie"},
+      {"value": "update", "displayValue": "Update: read Meridian Consent dataLayer object"}
     ],
     "simpleValueType": true,
     "defaultValue": "default",
@@ -83,13 +83,13 @@ const normalize = input => {
 };
 
 if (data.command === 'update') {
-  const update = copyFromDataLayer('measurestack_consent', 2) || {};
+  const update = copyFromDataLayer('meridian_consent', 2) || {};
   updateConsentState(normalize(update));
   data.gtmOnSuccess();
   return;
 }
 
-const values = getCookieValues('ms_consent', false);
+const values = getCookieValues('meridian_consent', false);
 let stored = {};
 if (values && values.length) {
   try {
@@ -112,7 +112,7 @@ ___WEB_PERMISSIONS___
       "key": {"publicId": "get_cookies", "versionId": "1"},
       "param": [
         {"key": "cookieAccess", "value": {"type": 1, "string": "specific"}},
-        {"key": "cookieNames", "value": {"type": 2, "listItem": [{"type": 1, "string": "ms_consent"}]}}
+        {"key": "cookieNames", "value": {"type": 2, "listItem": [{"type": 1, "string": "meridian_consent"}]}}
       ]
     },
     "clientAnnotations": {"isEditedByUser": true},
@@ -121,7 +121,7 @@ ___WEB_PERMISSIONS___
   {
     "instance": {
       "key": {"publicId": "read_data_layer", "versionId": "1"},
-      "param": [{"key": "keyPatterns", "value": {"type": 2, "listItem": [{"type": 1, "string": "measurestack_consent"}]}}]
+      "param": [{"key": "keyPatterns", "value": {"type": 2, "listItem": [{"type": 1, "string": "meridian_consent"}]}}]
     },
     "clientAnnotations": {"isEditedByUser": true},
     "isRequired": true
@@ -185,5 +185,5 @@ setup: |-
 
 ___NOTES___
 
-MeasureStack Consent Bridge 0.1.0. Run the default tag on Consent Initialization
-and the update tag on measurestack_consent_updated.
+Meridian Consent Bridge 0.1.0. Run the default tag on Consent Initialization
+and the update tag on meridian_consent_updated.

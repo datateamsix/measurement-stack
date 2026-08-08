@@ -2,12 +2,12 @@
   'use strict';
 
   const STORAGE = {
-    consent: 'measurestack_consent_v1',
-    attribution: 'measurestack_attribution_v1',
-    person: 'measurestack_person_id',
-    analyticsUser: 'measurestack_analytics_user_id',
-    anonymous: 'measurestack_anonymous_user_id',
-    session: 'measurestack_session_id',
+    consent: 'meridian_consent_v1',
+    attribution: 'measurementstack_attribution_v1',
+    person: 'measurementstack_person_id',
+    analyticsUser: 'measurementstack_analytics_user_id',
+    anonymous: 'measurementstack_anonymous_user_id',
+    session: 'measurementstack_session_id',
   };
   const TRACKED_QUERY_KEYS = [
     'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'utm_id',
@@ -371,20 +371,20 @@
   }
 
   async function runtimeConfig() {
-    if (window.__measureStackConfig) return window.__measureStackConfig;
+    if (window.__measurementStackConfig) return window.__measurementStackConfig;
     try {
       const response = await fetch('/api/config', { headers: { Accept: 'application/json' } });
       if (!response.ok) throw new Error(`Config returned ${response.status}`);
-      window.__measureStackConfig = await response.json();
+      window.__measurementStackConfig = await response.json();
     } catch (error) {
-      window.__measureStackConfig = {
+      window.__measurementStackConfig = {
         environment: 'development',
         clerkPublishableKey: '',
         integrations: {},
         error: error.message,
       };
     }
-    return window.__measureStackConfig;
+    return window.__measurementStackConfig;
   }
 
   let clerkPromise;
@@ -498,7 +498,7 @@
     return config;
   });
 
-  window.MeasureStack = {
+  window.MeasurementStack = {
     STORAGE,
     parseJson,
     escapeHtml,

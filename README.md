@@ -2,7 +2,7 @@
 
 **The attribution and identity resolution OS for your business.**
 
-MeasureStack is a fictitious SaaS product and practical measurement-engineering sandbox. It demonstrates how anonymous behavior, authenticated users, lead submissions, CRM records, Stripe test checkout, and advertising conversion events can resolve to one canonical customer identity.
+Measurement Stack is a fictitious SaaS product and practical measurement-engineering sandbox. It demonstrates how anonymous behavior, authenticated users, lead submissions, CRM records, Stripe test checkout, and advertising conversion events can resolve to one canonical customer identity.
 
 ## What is included
 
@@ -86,7 +86,7 @@ The current project is configured for:
 
 ```text
 Output directory: public
-Deploy command: npx wrangler pages deploy public --project-name=measurestack-leadgen
+Deploy command: npx wrangler pages deploy public --project-name=measurement-stack-leadgen
 ```
 
 The root-level `functions/` directory is bundled as Pages Functions. `public/_routes.json` limits Functions invocation to `/api/*`, keeping normal static page requests outside the Functions quota.
@@ -98,17 +98,17 @@ No secrets are committed. Follow [`docs/account-setup.md`](docs/account-setup.md
 The shortest useful setup is:
 
 1. Clerk publishable and secret keys
-2. D1 database binding named `MEASURESTACK_DB`
+2. D1 database binding named `MEASUREMENT_STACK_DB`
 3. Loops API key
 4. Stripe test secret, two recurring price IDs, and webhook secret
 5. Optional sGTM JSON endpoint
 
 ## D1 migration
 
-Create a database named `measurestack-identity`, bind it as `MEASURESTACK_DB`, and run:
+Create a database named `measurement-stack-identity`, bind it as `MEASUREMENT_STACK_DB`, and run:
 
 ```bash
-npx wrangler d1 migrations apply measurestack-identity --remote
+npx wrangler d1 migrations apply measurement-stack-identity --remote
 ```
 
 ## Conversion paths

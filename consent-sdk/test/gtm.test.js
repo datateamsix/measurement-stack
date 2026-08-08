@@ -13,7 +13,7 @@ const TYPES = [
 ];
 
 test('GTM template uses native consent APIs and has least-purpose permissions', async () => {
-  const template = await readFile(new URL('../gtm/measurestack-consent-template.tpl', import.meta.url), 'utf8');
+  const template = await readFile(new URL('../gtm/meridian-consent-template.tpl', import.meta.url), 'utf8');
   assert.match(template, /setDefaultConsentState/);
   assert.match(template, /updateConsentState/);
   assert.doesNotMatch(template, /gtag\(['"]consent/);
@@ -24,7 +24,7 @@ test('GTM template uses native consent APIs and has least-purpose permissions', 
 });
 
 test('starter container imports the full event contract with inert examples', async () => {
-  const contents = await readFile(new URL('../gtm/measurestack-starter-container.json', import.meta.url), 'utf8');
+  const contents = await readFile(new URL('../gtm/meridian-consent-starter-container.json', import.meta.url), 'utf8');
   const exported = JSON.parse(contents);
   const version = exported.containerVersion;
   const names = version.variable.map(({ name }) => name);

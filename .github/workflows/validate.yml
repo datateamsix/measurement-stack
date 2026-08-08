@@ -1,4 +1,4 @@
-name: Validate MeasureStack sandbox
+name: Validate Measurement Stack sandbox
 
 on:
   push:

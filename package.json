@@ -1,11 +1,11 @@
 {
-  "name": "measurestack-leadgen",
+  "name": "measurement-stack-leadgen",
   "version": "2.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "test": "node scripts/validate.mjs && node --test",
     "dev": "npx wrangler pages dev public",
-    "deploy": "npx wrangler pages deploy public --project-name=measurestack-leadgen"
+    "deploy": "npx wrangler pages deploy public --project-name=measurement-stack-leadgen"
   }
 }

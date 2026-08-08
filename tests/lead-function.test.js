@@ -23,7 +23,7 @@ const validBody = {
   utm_source: 'linkedin',
   utm_medium: 'paid_social',
   utm_content: 'founder_ad',
-  utm_campaign: 'measurestack_demo',
+  utm_campaign: 'measurementstack_demo',
   tracking: {
     person_id: 'person_test_001',
     analytics_user_id: 'analytics_test_001',
@@ -53,7 +53,7 @@ test('buildLead preserves sanitized identity and attribution fields', () => {
   assert.equal(lead.identity.person_id, 'person_test_001');
   assert.equal(lead.identity.analytics_user_id, 'analytics_test_001');
   assert.equal(lead.identity.ga_client_id, '123456789.1785904000');
-  assert.equal(lead.attributionFields.utm_campaign, 'measurestack_demo');
+  assert.equal(lead.attributionFields.utm_campaign, 'measurementstack_demo');
 });
 
 test('Stripe signature parser captures timestamp and every v1 signature', () => {
@@ -89,7 +89,7 @@ test('Wrangler binds the production identity database as DB', async () => {
   const config = await readFile(new URL('../wrangler.toml', import.meta.url), 'utf8');
   assert.match(config, /\[\[d1_databases\]\]/);
   assert.match(config, /binding\s*=\s*"DB"/);
-  assert.match(config, /database_name\s*=\s*"measurestack-identity"/);
+  assert.match(config, /database_name\s*=\s*"measurement-stack-identity"/);
 });
 
 test('paid pricing buttons support guest checkout rather than requiring Clerk', async () => {

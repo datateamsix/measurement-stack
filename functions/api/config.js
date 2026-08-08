@@ -7,10 +7,10 @@ export function onRequestGet({ env }) {
     scalePrice: Boolean(env.STRIPE_SCALE_PRICE_ID),
     webhookSecret: Boolean(env.STRIPE_WEBHOOK_SECRET),
   };
-  const d1 = Boolean(env.MEASURESTACK_DB || env.DB);
+  const d1 = Boolean(env.MEASUREMENT_STACK_DB || env.DB);
 
   return json({
-    environment: env.MEASURESTACK_ENVIRONMENT || 'development',
+    environment: env.MEASUREMENT_STACK_ENVIRONMENT || 'development',
     clerkPublishableKey: env.CLERK_PUBLISHABLE_KEY || '',
     integrations: {
       d1,

@@ -1,4 +1,4 @@
-# MeasureStack product event plan
+# Measurement Stack product event plan
 
 ## Lifecycle events
 

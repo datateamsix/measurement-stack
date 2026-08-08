@@ -3,7 +3,7 @@
 
   const status = document.getElementById('pricing-status');
   const buttons = [...document.querySelectorAll('.plan-button')];
-  const pendingKey = 'measurestack_pending_plan';
+  const pendingKey = 'measurementstack_pending_plan';
 
   function setStatus(message, ready = false) {
     status.textContent = message;
@@ -25,7 +25,7 @@
     try {
       await navigator.clipboard.writeText(value);
       button.textContent = 'Copied';
-      window.MeasureStack.track('test_payment_detail_copy', {
+      window.MeasurementStack.track('test_payment_detail_copy', {
         payment_field: button.dataset.copyField || 'unknown',
       });
     } catch {
@@ -44,11 +44,11 @@
   }
 
   async function initialize() {
-    const config = await window.MeasureStack.ready;
-    await window.MeasureStack.identityReady;
-    const { clerk } = await window.MeasureStack.loadClerk();
+    const config = await window.MeasurementStack.ready;
+    await window.MeasurementStack.identityReady;
+    const { clerk } = await window.MeasurementStack.loadClerk();
 
-    window.MeasureStack.track('view_pricing', {
+    window.MeasurementStack.track('view_pricing', {
       currency: 'USD',
       plans_shown: 'starter,growth,scale',
       stripe_configured: Boolean(config.integrations?.stripe),
@@ -77,11 +77,11 @@
   }
 
   async function startCheckout(plan, config) {
-    const { clerk } = await window.MeasureStack.loadClerk();
-    const tracking = window.MeasureStack.trackingContext();
+    const { clerk } = await window.MeasurementStack.loadClerk();
+    const tracking = window.MeasurementStack.trackingContext();
     const identityMode = clerk?.isSignedIn ? 'authenticated' : 'anonymous';
 
-    window.MeasureStack.track('select_plan', {
+    window.MeasurementStack.track('select_plan', {
       plan_id: plan,
       plan_name: plan,
       currency: 'USD',
@@ -110,7 +110,7 @@
     button.textContent = 'Creating test checkout…';
     setStatus(`Creating a Stripe test Checkout Session in ${identityMode} mode…`, true);
 
-    window.MeasureStack.track('begin_checkout', {
+    window.MeasurementStack.track('begin_checkout', {
       event_id: eventId,
       currency: 'USD',
       value: price,
@@ -127,7 +127,7 @@
     });
 
     try {
-      const response = await window.MeasureStack.authFetch('/api/checkout', {
+      const response = await window.MeasurementStack.authFetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan, eventId, tracking }),
@@ -135,8 +135,8 @@
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || `Checkout returned ${response.status}.`);
       if (!result.url) throw new Error('Stripe created no redirect URL. Check the configured Price IDs.');
-      if (result.identity) window.MeasureStack.applyResolvedIdentity(result.identity);
-      window.MeasureStack.recordBilling?.({
+      if (result.identity) window.MeasurementStack.applyResolvedIdentity(result.identity);
+      window.MeasurementStack.recordBilling?.({
         event_id: eventId,
         checkout_session_id: result.sessionId || '',
         stripe_customer_id: result.identity?.stripe_customer_id || '',
@@ -148,7 +148,7 @@
       setStatus(error.message);
       button.disabled = false;
       button.textContent = originalLabel;
-      window.MeasureStack.track('checkout_error', {
+      window.MeasurementStack.track('checkout_error', {
         event_id: eventId,
         plan_id: plan,
         authentication_status: identityMode,
@@ -158,7 +158,7 @@
   }
 
   buttons.forEach((button) => button.addEventListener('click', async () => {
-    const config = await window.MeasureStack.runtimeConfig();
+    const config = await window.MeasurementStack.runtimeConfig();
     await startCheckout(button.dataset.plan, config);
   }));
 
@@ -168,7 +168,7 @@
 
   initialize().catch((error) => {
     setStatus(`Pricing initialization failed: ${error.message}`);
-    window.MeasureStack?.track?.('pricing_initialization_error', {
+    window.MeasurementStack?.track?.('pricing_initialization_error', {
       error_message: error.message.slice(0, 200),
     });
   });

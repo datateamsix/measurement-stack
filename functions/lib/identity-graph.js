@@ -1,7 +1,7 @@
 import { text } from './http.js';
 
 function database(env) {
-  return env.MEASURESTACK_DB || env.DB || null;
+  return env.MEASUREMENT_STACK_DB || env.DB || null;
 }
 
 function safe(value, max = 500) {

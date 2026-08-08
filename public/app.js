@@ -4,7 +4,7 @@
   const form = document.getElementById('lead-form');
   if (!form) return;
 
-  const { track, trackingContext, parseJson, STORAGE, escapeHtml, authFetch } = window.MeasureStack;
+  const { track, trackingContext, parseJson, STORAGE, escapeHtml, authFetch } = window.MeasurementStack;
   const success = document.getElementById('form-success');
   const submitButton = document.getElementById('submit-button');
   const submitError = document.getElementById('submit-error');
@@ -44,7 +44,7 @@
     new IntersectionObserver((entries, observer) => {
       if (entries[0]?.isIntersecting && !formViewed) {
         formViewed = true;
-        track('form_view', { form_id: 'demo_request', form_name: 'MeasureStack demo request' });
+        track('form_view', { form_id: 'demo_request', form_name: 'Measurement Stack demo request' });
         observer.disconnect();
       }
     }, { threshold: 0.35 }).observe(form);
@@ -54,7 +54,7 @@
     if (event.target.name) clearError(event.target.name);
     if (!formStarted && event.target.type !== 'hidden') {
       formStarted = true;
-      track('form_start', { form_id: 'demo_request', form_name: 'MeasureStack demo request' });
+      track('form_start', { form_id: 'demo_request', form_name: 'Measurement Stack demo request' });
     }
   });
 
@@ -149,7 +149,7 @@
       form_id: 'demo_request',
       person_id: tracking.person_id,
       analytics_user_id: tracking.analytics_user_id,
-      authentication_status: (await window.MeasureStack.loadClerk()).clerk?.isSignedIn ? 'authenticated' : 'anonymous'
+      authentication_status: (await window.MeasurementStack.loadClerk()).clerk?.isSignedIn ? 'authenticated' : 'anonymous'
     });
 
     submitButton.disabled = true;
@@ -164,7 +164,7 @@
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || 'The request could not be submitted.');
 
-      if (result.identity) window.MeasureStack.applyResolvedIdentity(result.identity);
+      if (result.identity) window.MeasurementStack.applyResolvedIdentity(result.identity);
       const acceptedEventId = result.eventId || eventId;
       const consentChoice = parseJson(localStorage.getItem(STORAGE.consent), { analytics: false, marketing: false });
       const adsGranted = Boolean(consentChoice.marketing && input.marketingMeasurementConsent);
@@ -181,7 +181,7 @@
         lead_id: result.leadId || '',
         conversion_happened_at: happenedAt,
         form_id: 'demo_request',
-        form_name: 'MeasureStack demo request',
+        form_name: 'Measurement Stack demo request',
         lead_type: 'demo_request',
         company_size: input.companySize,
         use_case: input.useCase,

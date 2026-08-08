@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Sign in to the MeasureStack identity resolution sandbox.">
+  <meta name="description" content="Sign in to the Measurement Stack identity resolution sandbox.">
   <meta name="theme-color" content="#081b18">
   <link rel="icon" href="/favicon.svg">
   <link rel="stylesheet" href="/styles.css?v=20260807a">
-  <title>Sign in | MeasureStack</title>
+  <title>Sign in | Measurement Stack</title>
   <script>
     window.dataLayer = window.dataLayer || [];
     window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
     (function () {
       let consent = {};
-      try { consent = JSON.parse(localStorage.getItem('measurestack_consent_v1')) || consent; } catch (_) {}
+      try { consent = JSON.parse(localStorage.getItem('meridian_consent_v1')) || consent; } catch (_) {}
       window.gtag('consent', 'default', {
         analytics_storage: (consent.analytics_storage ?? consent.analytics) ? 'granted' : 'denied',
         ad_storage: (consent.ad_storage ?? consent.marketing) ? 'granted' : 'denied',
@@ -33,7 +33,7 @@
 <body class="auth-page">
   <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5MQ3QDNF" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <header class="site-header">
-    <a class="brand" href="/"><span class="brand-mark">M</span><span>MeasureStack</span></a>
+    <a class="brand" href="/"><span class="brand-mark">M</span><span>Measurement Stack</span></a>
     <nav aria-label="Primary navigation"><a href="/#platform">Platform</a><a href="/pricing.html">Pricing</a><a href="/#demo">Demo</a></nav>
     <div class="auth-nav" id="auth-nav"></div>
   </header>
@@ -41,7 +41,7 @@
     <section class="auth-copy">
       <p class="eyebrow">Resolve the customer journey</p>
       <h1>Sign in and watch anonymous signals become a known identity.</h1>
-      <p>Your browser IDs, campaign touch, GA identifiers, account identity, lead activity, and Stripe test customer can all resolve to one canonical MeasureStack person.</p>
+      <p>Your browser IDs, campaign touch, GA identifiers, account identity, lead activity, and Stripe test customer can all resolve to one canonical Measurement Stack person.</p>
       <div class="identity-chain" aria-label="Identity resolution sequence"><span>Anonymous ID</span><i>→</i><span>Clerk user</span><i>→</i><span>Person ID</span><i>→</i><span>CRM + ad platforms</span></div>
     </section>
     <section class="auth-card">

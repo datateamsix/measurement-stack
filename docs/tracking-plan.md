@@ -1,4 +1,4 @@
-# MeasureStack tracking plan
+# Measurement Stack tracking plan
 
 ## Primary conversion
 
@@ -31,7 +31,7 @@ Do not configure `form_submit_attempt` as the primary conversion. It represents 
   conversion_happened_at: 1785904180000,
   conversion_rule_id: '12345678',
   form_id: 'demo_request',
-  form_name: 'MeasureStack demo request',
+  form_name: 'Measurement Stack demo request',
   lead_type: 'demo_request',
   company_size: '251-1000',
   use_case: 'attribution',
@@ -45,7 +45,7 @@ Do not configure `form_submit_attempt` as the primary conversion. It represents 
   utm_source: 'linkedin',
   utm_medium: 'paid_social',
   utm_content: 'founder_ad',
-  utm_campaign: 'measurestack_demo',
+  utm_campaign: 'measurementstack_demo',
   user_data: {
     sha256_email_address: '<sha256 hex>',
     sha256_phone_number: '<sha256 hex>',

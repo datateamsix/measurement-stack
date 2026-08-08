@@ -17,9 +17,9 @@ The browser stores only pseudonymous identifiers, approved attribution context, 
 | `measurementstack.lifecycle.v1` | Visitor, lead, checkout, customer, and subscription transitions |
 | `measurementstack.network.v1` | Latest privacy-reduced network observation only |
 | `measurementstack.collection_policy.v1` | Active minimization and collection rules |
-| `measurestack_consent_v1` | Consent choice and immutable consent snapshot reference |
+| `meridian_consent_v1` | Consent choice and immutable consent snapshot reference |
 
-Legacy MeasureStack keys are retained as compatibility aliases while the sandbox transitions to the versioned envelopes.
+The `measurementstack.*` envelopes are the canonical identity and lifecycle namespaces. Meridian Consent owns the separate consent namespace.
 
 ## Google consent settings
 

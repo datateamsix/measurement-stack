@@ -4,7 +4,7 @@ const DEFAULT_IP_MODE = 'anonymize_strict';
 const DEFAULT_CLIENT_MODE = 'first_party_uuid';
 
 function database(env) {
-  return env.MEASURESTACK_DB || env.DB || null;
+  return env.MEASUREMENT_STACK_DB || env.DB || null;
 }
 
 function safe(value, max = 500) {

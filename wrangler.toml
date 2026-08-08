@@ -1,4 +1,4 @@
-name = "measurestack-leadgen"
+name = "measurement-stack-leadgen"
 pages_build_output_dir = "./public"
 compatibility_date = "2026-08-05"
 compatibility_flags = ["nodejs_compat"]
@@ -13,5 +13,5 @@ SGTM_PROTOCOL_VERSION = "2"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "measurestack-identity"
+database_name = "measurement-stack-identity"
 database_id = "96ebc52b-126a-4c31-8441-f412faa7ae35"

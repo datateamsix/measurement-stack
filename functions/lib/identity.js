@@ -4,7 +4,7 @@ const PERSON_PATTERN = /^person_[A-Za-z0-9-]{8,100}$/;
 const ANALYTICS_PATTERN = /^analytics_[A-Za-z0-9-]{8,100}$/;
 
 function database(env) {
-  return env.MEASURESTACK_DB || env.DB || null;
+  return env.MEASUREMENT_STACK_DB || env.DB || null;
 }
 
 function primaryEmail(user) {

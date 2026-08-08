@@ -16,7 +16,7 @@ function d1SetupError(error) {
 function throwD1SetupError() {
   throw new HttpError(
     503,
-    'D1 is connected, but the identity schema is not installed. Apply all migrations to measurestack-identity, then retry checkout.',
+    'D1 is connected, but the identity schema is not installed. Apply all migrations to measurement-stack-identity, then retry checkout.',
   );
 }
 

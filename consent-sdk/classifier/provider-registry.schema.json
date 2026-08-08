@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://meridian.measurestack.io/schemas/provider-registry.v1.json",
+  "$id": "https://meridian.measurementstack.io/schemas/provider-registry.v1.json",
   "title": "Meridian Consent provider registry",
   "type": "object",
   "additionalProperties": false,

@@ -36,6 +36,6 @@ export class HttpError extends Error {
 
 export function errorResponse(error) {
   if (error instanceof HttpError) return json({ error: error.message }, error.status);
-  console.error('MeasureStack request failed', { message: error?.message || String(error) });
+  console.error('Measurement Stack request failed', { message: error?.message || String(error) });
   return json({ error: 'An unexpected server error occurred.' }, 500);
 }

@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 
 const budget = 12 * 1024;
-const files = ['measurestack-consent.min.js', 'measurestack-consent.min.css'];
+const files = ['meridian-consent.min.js', 'meridian-consent.min.css'];
 let total = 0;
 for (const file of files) {
   const contents = await readFile(new URL(`../dist/${file}`, import.meta.url));

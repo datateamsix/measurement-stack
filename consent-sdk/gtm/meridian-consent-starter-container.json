@@ -1,0 +1,37 @@
+{
+  "exportFormatVersion": 2,
+  "exportTime": "2026-08-07 12:00:00",
+  "containerVersion": {
+    "accountId": "0",
+    "containerId": "0",
+    "containerVersionId": "0",
+    "container": {
+      "accountId": "0",
+      "containerId": "0",
+      "name": "Meridian Consent Starter",
+      "publicId": "GTM-XXXXXXX",
+      "usageContext": ["WEB"]
+    },
+    "variable": [
+      {"accountId":"0","containerId":"0","variableId":"100","name":"DLV - Meridian Consent - Security Storage","type":"v","parameter":[{"type":"INTEGER","key":"dataLayerVersion","value":"2"},{"type":"TEMPLATE","key":"name","value":"meridian_consent.security_storage"}]},
+      {"accountId":"0","containerId":"0","variableId":"101","name":"DLV - Meridian Consent - Functionality Storage","type":"v","parameter":[{"type":"INTEGER","key":"dataLayerVersion","value":"2"},{"type":"TEMPLATE","key":"name","value":"meridian_consent.functionality_storage"}]},
+      {"accountId":"0","containerId":"0","variableId":"102","name":"DLV - Meridian Consent - Personalization Storage","type":"v","parameter":[{"type":"INTEGER","key":"dataLayerVersion","value":"2"},{"type":"TEMPLATE","key":"name","value":"meridian_consent.personalization_storage"}]},
+      {"accountId":"0","containerId":"0","variableId":"103","name":"DLV - Meridian Consent - Analytics Storage","type":"v","parameter":[{"type":"INTEGER","key":"dataLayerVersion","value":"2"},{"type":"TEMPLATE","key":"name","value":"meridian_consent.analytics_storage"}]},
+      {"accountId":"0","containerId":"0","variableId":"104","name":"DLV - Meridian Consent - Ad Storage","type":"v","parameter":[{"type":"INTEGER","key":"dataLayerVersion","value":"2"},{"type":"TEMPLATE","key":"name","value":"meridian_consent.ad_storage"}]},
+      {"accountId":"0","containerId":"0","variableId":"105","name":"DLV - Meridian Consent - Ad User Data","type":"v","parameter":[{"type":"INTEGER","key":"dataLayerVersion","value":"2"},{"type":"TEMPLATE","key":"name","value":"meridian_consent.ad_user_data"}]},
+      {"accountId":"0","containerId":"0","variableId":"106","name":"DLV - Meridian Consent - Ad Personalization","type":"v","parameter":[{"type":"INTEGER","key":"dataLayerVersion","value":"2"},{"type":"TEMPLATE","key":"name","value":"meridian_consent.ad_personalization"}]},
+      {"accountId":"0","containerId":"0","variableId":"107","name":"DLV - Meridian Consent - Source","type":"v","parameter":[{"type":"INTEGER","key":"dataLayerVersion","value":"2"},{"type":"TEMPLATE","key":"name","value":"meridian_consent.source"}]},
+      {"accountId":"0","containerId":"0","variableId":"108","name":"DLV - Meridian Consent - Policy Version","type":"v","parameter":[{"type":"INTEGER","key":"dataLayerVersion","value":"2"},{"type":"TEMPLATE","key":"name","value":"meridian_consent.policy_version"}]}
+    ],
+    "trigger": [
+      {"accountId":"0","containerId":"0","triggerId":"200","name":"CE - Meridian Consent - Ready","type":"CUSTOM_EVENT","customEventFilter":[{"type":"EQUALS","parameter":[{"type":"TEMPLATE","key":"arg0","value":"{{_event}}"},{"type":"TEMPLATE","key":"arg1","value":"meridian_consent_ready"}]}]},
+      {"accountId":"0","containerId":"0","triggerId":"201","name":"CE - Meridian Consent - Updated","type":"CUSTOM_EVENT","customEventFilter":[{"type":"EQUALS","parameter":[{"type":"TEMPLATE","key":"arg0","value":"{{_event}}"},{"type":"TEMPLATE","key":"arg1","value":"meridian_consent_updated"}]}]},
+      {"accountId":"0","containerId":"0","triggerId":"202","name":"CE - Meridian Consent - Analytics Granted","type":"CUSTOM_EVENT","customEventFilter":[{"type":"MATCH_REGEX","parameter":[{"type":"TEMPLATE","key":"arg0","value":"{{_event}}"},{"type":"TEMPLATE","key":"arg1","value":"^meridian_consent_(ready|updated)$"}]}],"filter":[{"type":"EQUALS","parameter":[{"type":"TEMPLATE","key":"arg0","value":"{{DLV - Meridian Consent - Analytics Storage}}"},{"type":"TEMPLATE","key":"arg1","value":"granted"}]}]},
+      {"accountId":"0","containerId":"0","triggerId":"203","name":"CE - Meridian Consent - Advertising Granted","type":"CUSTOM_EVENT","customEventFilter":[{"type":"MATCH_REGEX","parameter":[{"type":"TEMPLATE","key":"arg0","value":"{{_event}}"},{"type":"TEMPLATE","key":"arg1","value":"^meridian_consent_(ready|updated)$"}]}],"filter":[{"type":"EQUALS","parameter":[{"type":"TEMPLATE","key":"arg0","value":"{{DLV - Meridian Consent - Ad Storage}}"},{"type":"TEMPLATE","key":"arg1","value":"granted"}]},{"type":"EQUALS","parameter":[{"type":"TEMPLATE","key":"arg0","value":"{{DLV - Meridian Consent - Ad User Data}}"},{"type":"TEMPLATE","key":"arg1","value":"granted"}]},{"type":"EQUALS","parameter":[{"type":"TEMPLATE","key":"arg0","value":"{{DLV - Meridian Consent - Ad Personalization}}"},{"type":"TEMPLATE","key":"arg1","value":"granted"}]}]}
+    ],
+    "tag": [
+      {"accountId":"0","containerId":"0","tagId":"300","name":"EXAMPLE - Analytics Vendor After Grant","type":"html","parameter":[{"type":"TEMPLATE","key":"html","value":"<script>window.dispatchEvent(new CustomEvent('meridian:example-analytics-granted'));<\/script>"},{"type":"BOOLEAN","key":"supportDocumentWrite","value":"false"}],"firingTriggerId":["202"],"paused":true,"tagFiringOption":"ONCE_PER_EVENT","consentSettings":{"consentStatus":"NEEDED","consentType":{"type":"LIST","list":[{"type":"STRING","value":"analytics_storage"}]}}},
+      {"accountId":"0","containerId":"0","tagId":"301","name":"EXAMPLE - Advertising Vendor After Grant","type":"html","parameter":[{"type":"TEMPLATE","key":"html","value":"<script>window.dispatchEvent(new CustomEvent('meridian:example-advertising-granted'));<\/script>"},{"type":"BOOLEAN","key":"supportDocumentWrite","value":"false"}],"firingTriggerId":["203"],"paused":true,"tagFiringOption":"ONCE_PER_EVENT","consentSettings":{"consentStatus":"NEEDED","consentType":{"type":"LIST","list":[{"type":"STRING","value":"ad_storage"},{"type":"STRING","value":"ad_user_data"},{"type":"STRING","value":"ad_personalization"}]}}}
+    ]
+  }
+}

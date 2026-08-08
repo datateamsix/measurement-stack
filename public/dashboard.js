@@ -3,12 +3,12 @@
 
   const loading = document.getElementById('workspace-loading');
   const content = document.getElementById('workspace-content');
-  const escape = window.MeasureStack.escapeHtml;
+  const escape = window.MeasurementStack.escapeHtml;
 
   const row = (label, value) => `<div><dt>${escape(label)}</dt><dd>${escape(value || 'Not captured')}</dd></div>`;
 
   async function getServerIdentity() {
-    const response = await window.MeasureStack.authFetch('/api/identity', { headers: { Accept: 'application/json' } });
+    const response = await window.MeasurementStack.authFetch('/api/identity', { headers: { Accept: 'application/json' } });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || 'Identity profile could not be loaded.');
     return result;
@@ -119,22 +119,22 @@
   }
 
   async function render() {
-    const config = await window.MeasureStack.ready;
-    await window.MeasureStack.identityReady;
-    const auth = await window.MeasureStack.loadClerk();
+    const config = await window.MeasurementStack.ready;
+    await window.MeasurementStack.identityReady;
+    const auth = await window.MeasurementStack.loadClerk();
     let serverResult = null;
 
     try {
       if (auth.clerk?.isSignedIn) {
-        await window.MeasureStack.syncIdentity();
+        await window.MeasurementStack.syncIdentity();
         serverResult = await getServerIdentity();
-        if (serverResult.identity) window.MeasureStack.applyResolvedIdentity({
+        if (serverResult.identity) window.MeasurementStack.applyResolvedIdentity({
           ...serverResult.identity,
           auth_providers: serverResult.graph?.external_auth_identities || [],
         });
       }
 
-      const snapshot = window.MeasureStack.identitySnapshot();
+      const snapshot = window.MeasurementStack.identitySnapshot();
       const identity = serverResult?.identity || snapshot.identity.canonical;
       const graph = serverResult?.graph || {};
       const touch = snapshot.attribution.last_touch || {};
@@ -199,7 +199,7 @@
 
       loading.hidden = true;
       content.hidden = false;
-      window.MeasureStack.track('view_identity_workspace', {
+      window.MeasurementStack.track('view_identity_workspace', {
         person_id: identity.person_id || snapshot.identity.canonical.person_id,
         analytics_user_id: identity.analytics_user_id || snapshot.identity.canonical.analytics_user_id,
         identity_storage: storageLabel,
@@ -213,7 +213,7 @@
   }
 
   document.getElementById('refresh-identity')?.addEventListener('click', async () => {
-    await window.MeasureStack.refreshNetworkContext?.();
+    await window.MeasurementStack.refreshNetworkContext?.();
     location.reload();
   });
 

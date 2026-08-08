@@ -5,12 +5,12 @@
   const RETENTION_DAYS = 395;
   const MAX_RECENT_TOUCHES = 12;
   const LEGACY = {
-    consent: 'measurestack_consent_v1',
-    attribution: 'measurestack_attribution_v1',
-    person: 'measurestack_person_id',
-    analyticsUser: 'measurestack_analytics_user_id',
-    anonymous: 'measurestack_anonymous_user_id',
-    session: 'measurestack_session_id'
+    consent: 'meridian_consent_v1',
+    attribution: 'measurementstack_attribution_v1',
+    person: 'measurementstack_person_id',
+    analyticsUser: 'measurementstack_analytics_user_id',
+    anonymous: 'measurementstack_anonymous_user_id',
+    session: 'measurementstack_session_id'
   };
   const STORAGE = {
     identity: 'measurementstack.identity_graph.v1',

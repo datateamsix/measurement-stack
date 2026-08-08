@@ -1,4 +1,4 @@
-# MeasureStack account and token setup
+# Measurement Stack account and token setup
 
 The repository contains no real account credentials. Configure the following values in Cloudflare under the project’s **Settings → Variables and Secrets**. Add secrets to both Production and Preview only when you intentionally want both environments connected.
 
@@ -15,23 +15,23 @@ Create a free Clerk application and enable email/password or the social provider
 Example authorized parties:
 
 ```text
-https://measurestack-leadgen.pages.dev,https://your-custom-domain.example
+https://measurement-stack-leadgen.pages.dev,https://your-custom-domain.example
 ```
 
 After deployment, add the Pages domain to the Clerk application’s allowed origins and redirect URLs.
 
 ## 2. Cloudflare D1 identity database
 
-Create a D1 database named `measurestack-identity`. Bind it to the Pages project with this exact variable name:
+Create a D1 database named `measurement-stack-identity`. Bind it to the Pages project with this exact variable name:
 
 ```text
-MEASURESTACK_DB
+MEASUREMENT_STACK_DB
 ```
 
 Apply the schema:
 
 ```bash
-npx wrangler d1 migrations apply measurestack-identity --remote
+npx wrangler d1 migrations apply measurement-stack-identity --remote
 ```
 
 The migration is stored at `migrations/0001_identity_resolution.sql`.

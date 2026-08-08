@@ -36,7 +36,7 @@
     ad_personalization: ['Advertising personalization', 'Allows data to be used for personalized advertising and remarketing.'],
   });
   const DEFAULT_CONFIG = Object.freeze({
-    cookieName: 'ms_consent',
+    cookieName: 'meridian_consent',
     cookieDays: 180,
     policyVersion: '1.0',
     waitForUpdate: 500,
@@ -67,7 +67,7 @@
 
   const uid = () => {
     if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
-    return `msc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 12)}`;
+    return `mrc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 12)}`;
   };
 
   const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, (character) => ({
@@ -88,7 +88,7 @@
   ]));
 
   function scriptConfig() {
-    const script = document.currentScript || [...document.scripts].find((item) => /measurestack-consent(?:\.min)?\.js/.test(item.src));
+    const script = document.currentScript || [...document.scripts].find((item) => /meridian-consent(?:\.min)?\.js/.test(item.src));
     if (!script) return {};
     return {
       policyVersion: script.dataset.policyVersion,
@@ -101,7 +101,7 @@
   }
 
   function mergeConfig(overrides = {}) {
-    const source = { ...scriptConfig(), ...(window.MeasureStackConsentConfig || {}), ...overrides };
+    const source = { ...scriptConfig(), ...(window.MeridianConsentConfig || {}), ...overrides };
     Object.keys(source).forEach((key) => source[key] === undefined && delete source[key]);
     return {
       ...DEFAULT_CONFIG,
@@ -151,7 +151,7 @@
   function envelope(event, source, record) {
     return {
       event,
-      measurestack_consent: {
+      meridian_consent: {
         schema_version: SCHEMA_VERSION,
         sdk_version: VERSION,
         policy_version: config.policyVersion,
@@ -169,8 +169,8 @@
     const payload = envelope(event, source, record);
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push(payload);
-    window.dispatchEvent(new CustomEvent('measurestack:consent', { detail: payload.measurestack_consent }));
-    listeners.forEach((listener) => listener({ ...payload.measurestack_consent }));
+    window.dispatchEvent(new CustomEvent('meridian:consent', { detail: payload.meridian_consent }));
+    listeners.forEach((listener) => listener({ ...payload.meridian_consent }));
     return payload;
   }
 
@@ -191,7 +191,7 @@
     writeCookie(next);
     current = next;
     callGoogle('update', next.states);
-    emit('measurestack_consent_updated', source, next);
+    emit('meridian_consent_updated', source, next);
     syncForm();
     hideBanner();
     closeSettings();
@@ -206,40 +206,40 @@
   function themeStyle() {
     return Object.entries(config.theme)
       .filter(([, value]) => !/[;{}<>]/.test(String(value)))
-      .map(([key, value]) => `--msc-${key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}:${value}`)
+      .map(([key, value]) => `--mrc-${key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}:${value}`)
       .join(';');
   }
 
   function categoryMarkup(type) {
     const [title, description] = config.categories[type] || CATEGORY_COPY[type];
     const required = type === 'security_storage';
-    return `<div class="msc-option"><div><label for="msc-${type}">${escapeHtml(title)}</label>${config.showGoogleKeys ? `<code>${type}</code>` : ''}<p>${escapeHtml(description)}</p></div><label class="msc-switch"><span class="msc-sr">${escapeHtml(title)}</span><input id="msc-${type}" name="${type}" type="checkbox"${required ? ' checked disabled' : ''}><span aria-hidden="true"></span></label></div>`;
+    return `<div class="mrc-option"><div><label for="mrc-${type}">${escapeHtml(title)}</label>${config.showGoogleKeys ? `<code>${type}</code>` : ''}<p>${escapeHtml(description)}</p></div><label class="mrc-switch"><span class="mrc-sr">${escapeHtml(title)}</span><input id="mrc-${type}" name="${type}" type="checkbox"${required ? ' checked disabled' : ''}><span aria-hidden="true"></span></label></div>`;
   }
 
   function ensureUi() {
-    if (document.getElementById('msc-root')) return;
+    if (document.getElementById('mrc-root')) return;
     if (!document.body) return;
     const links = [
       safeUrl(config.privacyUrl) && `<a href="${safeUrl(config.privacyUrl)}">Privacy policy</a>`,
       safeUrl(config.cookieUrl) && `<a href="${safeUrl(config.cookieUrl)}">Cookie policy</a>`,
     ].filter(Boolean).join('');
     const root = document.createElement('div');
-    root.id = 'msc-root';
+    root.id = 'mrc-root';
     root.style.cssText = themeStyle();
-    root.innerHTML = `<aside class="msc-banner" aria-label="Cookie preferences" aria-live="polite" hidden><div><strong>${escapeHtml(config.copy.title)}</strong><p>${escapeHtml(config.copy.bannerText)}</p>${links ? `<nav>${links}</nav>` : ''}</div><div class="msc-actions"><button type="button" data-msc-action="reject">${escapeHtml(config.copy.rejectOptional)}</button><button type="button" data-msc-open>${escapeHtml(config.copy.manage)}</button><button type="button" class="msc-primary" data-msc-action="accept">${escapeHtml(config.copy.acceptAll)}</button></div></aside><div class="msc-backdrop" hidden><section class="msc-dialog" role="dialog" aria-modal="true" aria-labelledby="msc-title" tabindex="-1"><header><div><small>Privacy choices</small><h2 id="msc-title">${escapeHtml(config.copy.title)}</h2></div><button class="msc-close" type="button" aria-label="${escapeHtml(config.copy.close)}">&times;</button></header><p class="msc-intro">${escapeHtml(config.copy.settingsIntro)}</p><form><div class="msc-list">${CONSENT_TYPES.map(categoryMarkup).join('')}</div><div class="msc-footer">${links ? `<nav>${links}</nav>` : '<span></span>'}<div class="msc-actions"><button type="button" data-msc-action="reject">${escapeHtml(config.copy.rejectOptional)}</button><button type="button" data-msc-action="accept">${escapeHtml(config.copy.acceptAll)}</button><button class="msc-primary" type="submit">${escapeHtml(config.copy.save)}</button></div></div></form></section></div>`;
+    root.innerHTML = `<aside class="mrc-banner" aria-label="Cookie preferences" aria-live="polite" hidden><div><strong>${escapeHtml(config.copy.title)}</strong><p>${escapeHtml(config.copy.bannerText)}</p>${links ? `<nav>${links}</nav>` : ''}</div><div class="mrc-actions"><button type="button" data-mrc-action="reject">${escapeHtml(config.copy.rejectOptional)}</button><button type="button" data-mrc-open>${escapeHtml(config.copy.manage)}</button><button type="button" class="mrc-primary" data-mrc-action="accept">${escapeHtml(config.copy.acceptAll)}</button></div></aside><div class="mrc-backdrop" hidden><section class="mrc-dialog" role="dialog" aria-modal="true" aria-labelledby="mrc-title" tabindex="-1"><header><div><small>Privacy choices</small><h2 id="mrc-title">${escapeHtml(config.copy.title)}</h2></div><button class="mrc-close" type="button" aria-label="${escapeHtml(config.copy.close)}">&times;</button></header><p class="mrc-intro">${escapeHtml(config.copy.settingsIntro)}</p><form><div class="mrc-list">${CONSENT_TYPES.map(categoryMarkup).join('')}</div><div class="mrc-footer">${links ? `<nav>${links}</nav>` : '<span></span>'}<div class="mrc-actions"><button type="button" data-mrc-action="reject">${escapeHtml(config.copy.rejectOptional)}</button><button type="button" data-mrc-action="accept">${escapeHtml(config.copy.acceptAll)}</button><button class="mrc-primary" type="submit">${escapeHtml(config.copy.save)}</button></div></div></form></section></div>`;
     document.body.appendChild(root);
 
-    root.querySelectorAll('[data-msc-action="accept"]').forEach((button) => button.addEventListener('click', () => apply(all(true), 'accept_all')));
-    root.querySelectorAll('[data-msc-action="reject"]').forEach((button) => button.addEventListener('click', () => apply(all(false), 'reject_optional')));
-    root.querySelector('[data-msc-open]').addEventListener('click', (event) => openSettings(event.currentTarget));
-    root.querySelector('.msc-close').addEventListener('click', closeSettings);
-    root.querySelector('.msc-backdrop').addEventListener('click', (event) => event.target === event.currentTarget && closeSettings());
+    root.querySelectorAll('[data-mrc-action="accept"]').forEach((button) => button.addEventListener('click', () => apply(all(true), 'accept_all')));
+    root.querySelectorAll('[data-mrc-action="reject"]').forEach((button) => button.addEventListener('click', () => apply(all(false), 'reject_optional')));
+    root.querySelector('[data-mrc-open]').addEventListener('click', (event) => openSettings(event.currentTarget));
+    root.querySelector('.mrc-close').addEventListener('click', closeSettings);
+    root.querySelector('.mrc-backdrop').addEventListener('click', (event) => event.target === event.currentTarget && closeSettings());
     root.querySelector('form').addEventListener('submit', (event) => {
       event.preventDefault();
       apply(Object.fromEntries(CONSENT_TYPES.map((type) => [type, event.currentTarget.elements[type]?.checked ? 'granted' : 'denied'])), 'save_settings');
     });
     document.addEventListener('keydown', onKeydown);
-    document.querySelectorAll('[data-measurestack-consent-settings]').forEach((element) => element.addEventListener('click', (event) => {
+    document.querySelectorAll('[data-meridian-consent-settings]').forEach((element) => element.addEventListener('click', (event) => {
       event.preventDefault();
       openSettings(element);
     }));
@@ -247,25 +247,25 @@
   }
 
   function syncForm() {
-    const form = document.querySelector('#msc-root form');
+    const form = document.querySelector('#mrc-root form');
     if (!form || !current) return;
     CONSENT_TYPES.forEach((type) => { if (form.elements[type]) form.elements[type].checked = current.states[type] === 'granted'; });
   }
 
   function showBanner() {
     ensureUi();
-    const banner = document.querySelector('#msc-root .msc-banner');
+    const banner = document.querySelector('#mrc-root .mrc-banner');
     if (banner) banner.hidden = false;
   }
 
   function hideBanner() {
-    const banner = document.querySelector('#msc-root .msc-banner');
+    const banner = document.querySelector('#mrc-root .mrc-banner');
     if (banner) banner.hidden = true;
   }
 
   function openSettings(trigger = document.activeElement) {
     ensureUi();
-    const backdrop = document.querySelector('#msc-root .msc-backdrop');
+    const backdrop = document.querySelector('#mrc-root .mrc-backdrop');
     if (!backdrop) {
       document.addEventListener('DOMContentLoaded', () => openSettings(trigger), { once: true });
       return;
@@ -273,20 +273,20 @@
     returnFocus = trigger;
     syncForm();
     backdrop.hidden = false;
-    document.documentElement.classList.add('msc-open');
-    backdrop.querySelector('.msc-dialog').focus();
+    document.documentElement.classList.add('mrc-open');
+    backdrop.querySelector('.mrc-dialog').focus();
   }
 
   function closeSettings() {
-    const backdrop = document.querySelector('#msc-root .msc-backdrop');
+    const backdrop = document.querySelector('#mrc-root .mrc-backdrop');
     if (!backdrop || backdrop.hidden) return;
     backdrop.hidden = true;
-    document.documentElement.classList.remove('msc-open');
+    document.documentElement.classList.remove('mrc-open');
     returnFocus?.focus?.();
   }
 
   function onKeydown(event) {
-    const dialog = document.querySelector('#msc-root .msc-dialog');
+    const dialog = document.querySelector('#mrc-root .mrc-dialog');
     if (!dialog || dialog.parentElement.hidden) return;
     if (event.key === 'Escape') return closeSettings();
     if (event.key !== 'Tab') return;
@@ -315,7 +315,7 @@
     removeCookie();
     current = recordFor(DENIED_DEFAULTS, false);
     callGoogle('update', current.states);
-    emit('measurestack_consent_updated', 'reset', current);
+    emit('meridian_consent_updated', 'reset', current);
     showBanner();
     return getState();
   }
@@ -325,7 +325,7 @@
     config = mergeConfig(overrides);
     current = storedChoice() || recordFor(DENIED_DEFAULTS, false);
     callGoogle('default', current.states);
-    emit('measurestack_consent_ready', current.has_choice ? 'stored_choice' : 'default', current);
+    emit('meridian_consent_ready', current.has_choice ? 'stored_choice' : 'default', current);
     const mount = () => {
       ensureUi();
       if (config.autoShow && !current.has_choice) showBanner();
@@ -335,7 +335,7 @@
     return getState();
   }
 
-  window.MeasureStackConsent = Object.freeze({
+  window.MeridianConsent = Object.freeze({
     version: VERSION,
     consentTypes: CONSENT_TYPES,
     init,
