@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="../assets/meridian-consent-logo.svg" alt="Meridian Consent" width="390">
+</p>
+
 # Meridian Consent Impact Analytics
 
 Consent Impact Analytics measures **measurement opportunities**, not hidden people. It records aggregate counters for consent-ready states, page loads, consent updates, and an explicit allowlist of business events. It never attempts to reconstruct consent-denied users or sessions.

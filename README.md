@@ -22,6 +22,14 @@ Measurement Stack is a fictitious SaaS product and practical measurement-enginee
 - Standalone **Meridian Consent** SDK, GTM starter kit, and container-classification CLI in [`consent-sdk/`](consent-sdk/README.md)
 - Production pages load Meridian Consent synchronously before GTM from `public/consent/`; rebuild and sync those browser assets with `npm run build:consent`
 
+## Meridian Consent
+
+<p align="center">
+  <img src="consent-sdk/assets/meridian-consent-logo.svg" alt="Meridian Consent" width="390">
+</p>
+
+Meridian is the measurement operating system within this sandbox. Meridian Consent is its focused consent product: a dependency-free browser runtime paired with GTM governance, consent-impact collection, and CLI analysis. See the [`consent-sdk` documentation](consent-sdk/README.md) for installation, architecture, and brand assets.
+
 ## Product pages
 
 ```text

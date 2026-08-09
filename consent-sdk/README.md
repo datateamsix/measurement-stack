@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/meridian-consent-logo.svg" alt="Meridian Consent" width="430">
+</p>
+
 # Meridian Consent
 
 A small, dependency-free consent runtime and an auditable Google Tag Manager governance toolkit. Meridian is the measurement operating system; Meridian Consent is its focused consent product.
@@ -21,6 +25,20 @@ The design goal is deliberately narrow: establish consent before measurement, co
 Optional **Consent Impact Analytics** adds privacy-preserving aggregate counters and CLI reporting without enlarging or networking the core runtime. See [`analytics/README.md`](analytics/README.md).
 
 This is a consent mechanism, not legal advice or an IAB TCF-certified publisher CMP.
+
+## Brand assets
+
+The master Meridian mark is a split compass ring crossed by a north-south reference line. Product names use the same mark and wordmark with a subordinate extension label, allowing the identity to scale beyond Consent without creating disconnected logos.
+
+| Asset | Use |
+|---|---|
+| [`meridian-mark.svg`](assets/meridian-mark.svg) | Standalone icon, avatar, or favicon source |
+| [`meridian-logo.svg`](assets/meridian-logo.svg) | Master Meridian lockup on light backgrounds |
+| [`meridian-logo-light.svg`](assets/meridian-logo-light.svg) | Master Meridian lockup on dark backgrounds |
+| [`meridian-consent-logo.svg`](assets/meridian-consent-logo.svg) | Meridian Consent lockup on light backgrounds |
+| [`meridian-consent-logo-light.svg`](assets/meridian-consent-logo-light.svg) | Meridian Consent lockup on dark backgrounds |
+
+The SVGs use system-font fallbacks so they render without external assets. Preserve the proportions, colors, and clear space around the mark; do not add privacy clichés such as locks, shields, cookies, or fingerprints.
 
 ## Container scanner and CLI
 

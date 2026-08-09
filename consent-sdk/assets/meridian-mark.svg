@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 88" role="img" aria-labelledby="title desc">
+  <title id="title">Meridian mark</title>
+  <desc id="desc">A split compass ring crossed by a north-south meridian and center point.</desc>
+  <path d="M38 10a35 35 0 0 0 0 68" fill="none" stroke="#2B1B69" stroke-width="10" stroke-linecap="round"/>
+  <path d="M50 10a35 35 0 0 1 0 68" fill="none" stroke="#2563EB" stroke-width="10" stroke-linecap="round"/>
+  <path d="M44 15v58" fill="none" stroke="#0F9F8F" stroke-width="6" stroke-linecap="round"/>
+  <path d="M44 32c2.2 6.1 5.9 9.8 12 12-6.1 2.2-9.8 5.9-12 12-2.2-6.1-5.9-9.8-12-12 6.1-2.2 9.8-5.9 12-12Z" fill="#0F9F8F"/>
+</svg>
