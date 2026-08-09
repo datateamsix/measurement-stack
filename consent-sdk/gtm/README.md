@@ -2,7 +2,8 @@
 
 This directory contains two optional GTM assets:
 
-- `meridian-consent-starter-container.json` — importable variables, triggers, and paused example tags.
+- `meridian-consent-starter-container.json` — importable variables, triggers, and paused example tags. The examples use `NOT_SET` consent metadata and consent-granted event triggers so the export matches GTM's native container schema without REST-only consent parameter encodings.
+- `meridian-consent-starter-container-v0.1.2.json` — versioned copy of the corrected starter for cache-safe downloading and import verification.
 - `meridian-consent-template.tpl` — a native GTM consent template that calls `setDefaultConsentState` and `updateConsentState`.
 
 ## Import the starter container

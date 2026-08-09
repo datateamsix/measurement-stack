@@ -3,6 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { createInterface } from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import { resolve } from 'node:path';
+import { fetchConsentImpactSummary, summaryCsv, summaryTable } from '../analytics/index.js';
 import {
   DEFAULT_REGISTRY,
   applyApprovalManifest,
@@ -20,22 +21,31 @@ Usage:
   meridian-consent plan <report.json> [--output approvals.json]
   meridian-consent review <approvals.json> [--output approvals.reviewed.json]
   meridian-consent apply <container.json> --plan approvals.reviewed.json --output container.meridian.json
+  meridian-consent analytics --endpoint <url> --site <site-id> [--from <date>] [--to <date>]
+    [--group-by day|country|region|event|consent] [--format table|json|csv]
+    [--output consent-impact.csv]
+    [--token-env MERIDIAN_CONSENT_READ_TOKEN]
 
 The apply command refuses pending decisions and verifies the source and every approved tag fingerprint.`);
 }
 
 function argsOf(argv) {
-  const [command, file, ...rest] = argv;
+  const [command, ...rest] = argv;
   const options = {};
+  const positionals = [];
   for (let index = 0; index < rest.length; index += 1) {
     const key = rest[index];
-    if (!key.startsWith('--')) throw new Error(`Unexpected argument: ${key}`);
+    if (!key.startsWith('--')) {
+      positionals.push(key);
+      continue;
+    }
     const value = rest[index + 1];
     if (!value || value.startsWith('--')) throw new Error(`Missing value for ${key}`);
     options[key.slice(2)] = value;
     index += 1;
   }
-  return { command, file, options };
+  if (positionals.length > 1) throw new Error(`Unexpected argument: ${positionals[1]}`);
+  return { command, file: positionals[0], options };
 }
 
 async function json(path) {
@@ -81,6 +91,35 @@ async function review(manifest) {
 async function main() {
   const { command, file, options } = argsOf(process.argv.slice(2));
   if (!command || command === 'help' || command === '--help') return usage();
+  if (command === 'analytics') {
+    const tokenEnvironment = options['token-env'] || 'MERIDIAN_CONSENT_READ_TOKEN';
+    const result = await fetchConsentImpactSummary({
+      endpoint: options.endpoint,
+      siteId: options.site,
+      from: options.from,
+      to: options.to,
+      groupBy: options['group-by'] || 'day',
+      token: process.env[tokenEnvironment],
+    });
+    const format = options.format || 'table';
+    if (!['table', 'json', 'csv'].includes(format)) throw new Error('--format must be table, json, or csv.');
+    const serialized = format === 'json'
+      ? `${JSON.stringify(result, null, 2)}\n`
+      : format === 'csv'
+        ? summaryCsv(result)
+        : null;
+    if (options.output) {
+      if (!serialized) throw new Error('--output requires --format json or --format csv.');
+      await writeFile(options.output, serialized, 'utf8');
+      console.log(`Wrote ${options.output}`);
+    } else if (serialized) {
+      process.stdout.write(serialized);
+    } else {
+      console.table(summaryTable(result.rows));
+      console.log(result.totals);
+    }
+    return;
+  }
   if (!file) throw new Error(`The ${command} command requires an input file.`);
 
   if (command === 'scan') {

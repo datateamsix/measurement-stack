@@ -18,6 +18,8 @@ The design goal is deliberately narrow: establish consent before measurement, co
 - creates an explicit approval manifest before applying any consent configuration;
 - preserves existing GTM triggers and never publishes a container.
 
+Optional **Consent Impact Analytics** adds privacy-preserving aggregate counters and CLI reporting without enlarging or networking the core runtime. See [`analytics/README.md`](analytics/README.md).
+
 This is a consent mechanism, not legal advice or an IAB TCF-certified publisher CMP.
 
 ## Container scanner and CLI
@@ -31,6 +33,11 @@ meridian-consent review approvals.json --output approvals.reviewed.json
 meridian-consent apply GTM-XXXX_workspace.json \
   --plan approvals.reviewed.json \
   --output GTM-XXXX_meridian.json
+
+meridian-consent analytics \
+  --endpoint https://example.com/api/consent-impact \
+  --site example \
+  --group-by day
 ```
 
 The workflow is deliberately gated:
@@ -53,7 +60,7 @@ The report separates the consent signals a tag uses from the way GTM should enfo
 | `essential` | Consent-management bootstrap | Leave unblocked |
 | `unresolved` | Unknown Custom HTML | Require manual review |
 
-The patch uses [GTM's documented `consentSettings` resource shape](https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers.workspaces.tags): `consentStatus: NEEDED` and a `LIST` of `STRING` consent types. Existing firing, blocking, setup, and teardown triggers are not modified.
+The patch uses GTM's documented [`consentSettings` resource shape](https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers.workspaces.tags): `consentStatus: NEEDED` and a `LIST` of text consent types. In importable container JSON, each text list item uses the valid `TEMPLATE` [`Parameter.Type`](https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/Parameter); `STRING` is not a recognized container-import enum. Existing firing, blocking, setup, and teardown triggers are not modified.
 
 ### Provider registry
 

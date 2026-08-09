@@ -8,7 +8,7 @@
     "container": {
       "accountId": "0",
       "containerId": "0",
-      "name": "Meridian Consent Starter",
+      "name": "Meridian Consent Starter v0.1.2",
       "publicId": "GTM-XXXXXXX",
       "usageContext": ["WEB"]
     },

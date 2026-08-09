@@ -25,8 +25,14 @@ test('every GTM page loads Meridian synchronously before the container', async (
     const html = await read(`public/${page}`);
     const configAt = html.indexOf('window.MeridianConsentConfig');
     const sdkAt = html.indexOf('/consent/meridian-consent.min.js');
+    const analyticsConfigAt = html.indexOf('window.MeridianConsentAnalyticsConfig');
+    const analyticsAt = html.indexOf('/consent/meridian-consent-analytics.min.js');
     const gtmAt = html.indexOf('GTM-5MQ3QDNF');
-    assert.ok(configAt >= 0 && configAt < sdkAt && sdkAt < gtmAt, `${page} must load Meridian before GTM`);
+    assert.ok(
+      configAt >= 0 && configAt < sdkAt && sdkAt < analyticsConfigAt
+        && analyticsConfigAt < analyticsAt && analyticsAt < gtmAt,
+      `${page} must load Meridian and impact analytics before GTM`,
+    );
     assert.match(html, /\/consent\/meridian-consent\.min\.css/);
     assert.match(html, /data-meridian-consent-settings/, `${page} is missing the settings link`);
     assert.doesNotMatch(html, /id="consent-banner"|data-consent-settings|gtag\('consent', 'default'/);
@@ -42,7 +48,11 @@ test('identity graph consumes granular Meridian state without owning consent sto
 });
 
 test('deployed consent assets exactly match the package build', async () => {
-  for (const asset of ['meridian-consent.min.js', 'meridian-consent.min.css']) {
+  for (const asset of [
+    'meridian-consent.min.js',
+    'meridian-consent.min.css',
+    'meridian-consent-analytics.min.js',
+  ]) {
     assert.equal(await read(`public/consent/${asset}`), await read(`consent-sdk/dist/${asset}`));
   }
 });

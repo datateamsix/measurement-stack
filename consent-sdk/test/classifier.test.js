@@ -80,6 +80,7 @@ test('apply changes only approved additional checks and preserves triggers byte-
     meta.consentSettings.consentType.list.map(({ value }) => value),
     ['ad_storage', 'ad_user_data', 'ad_personalization'],
   );
+  assert.ok(meta.consentSettings.consentType.list.every(({ type }) => type === 'TEMPLATE'));
   assert.equal(JSON.stringify(container.containerVersion.trigger), originalTriggers);
   assert.equal(JSON.stringify(container.containerVersion.tag[0]), originalGa4);
   assert.equal(fixture.containerVersion.tag[1].consentSettings, undefined, 'input must not be mutated');

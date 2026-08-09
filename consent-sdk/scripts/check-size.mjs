@@ -12,3 +12,6 @@ for (const file of files) {
 }
 console.log(`Total: ${total} bytes gzip (budget: ${budget} bytes)`);
 if (total > budget) process.exitCode = 1;
+
+const optionalAnalytics = await readFile(new URL('../dist/meridian-consent-analytics.min.js', import.meta.url));
+console.log(`Optional analytics module: ${gzipSync(optionalAnalytics).byteLength} bytes gzip`);

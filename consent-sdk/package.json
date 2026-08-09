@@ -1,6 +1,6 @@
 {
   "name": "@meridian/consent",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A lightweight consent runtime and auditable GTM governance toolkit for Meridian.",
   "type": "module",
   "private": true,
@@ -16,6 +16,7 @@
     "meridian-consent": "./bin/meridian-consent.js"
   },
   "exports": {
+    "./analytics": "./analytics/index.js",
     "./classifier": "./classifier/index.js",
     "./registry": "./classifier/providers.v1.json"
   },

@@ -230,7 +230,11 @@ function consentSettings(types) {
     consentStatus: 'NEEDED',
     consentType: {
       type: 'LIST',
-      list: types.map((type) => ({ type: 'STRING', value: type })),
+      // GTM container imports deserialize list values as Parameter objects.
+      // TEMPLATE is the text-valued Parameter enum; STRING is not accepted by
+      // the container import format even though the Tag API describes this
+      // field conceptually as LIST<STRING>.
+      list: types.map((type) => ({ type: 'TEMPLATE', value: type })),
     },
   };
 }
