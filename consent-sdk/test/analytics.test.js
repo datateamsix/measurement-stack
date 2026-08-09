@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import vm from 'node:vm';
 import { readFile } from 'node:fs/promises';
-import { summaryCsv, summaryTable } from '../analytics/index.js';
+import { exposureCsv, exposureRows, summaryCsv, summaryTable } from '../analytics/index.js';
 
 const source = await readFile(new URL('../src/meridian-consent-analytics.js', import.meta.url), 'utf8');
 
@@ -114,4 +114,32 @@ test('CSV export has a stable warehouse-friendly schema and numeric rates', () =
     '1.0', 'measurementstack', '2026-08-01T00:00:00.000Z', '2026-08-09T00:00:00.000Z',
     'day', '2026-08-08', '5', '2', '3', '0.6', '1', '4', '0.8',
   ].join(','));
+});
+
+test('impact manifest expands aggregate event counts into tag-level exposures', () => {
+  const result = {
+    schema_version: '1.0',
+    site_id: 'measurementstack',
+    from: '2026-08-01T00:00:00.000Z',
+    to: '2026-08-09T00:00:00.000Z',
+    group_by: 'event',
+    rows: [{
+      dimension: 'page_view',
+      total_events: 10,
+      consent_denied_events: 6,
+      advertising_blocked_events: 7,
+    }],
+  };
+  const rows = exposureRows(result, {
+    schema_version: '1.0',
+    rules: [
+      { event_name: 'page_view', tag_id: '1', tag_name: 'GA4', provider_id: 'google.analytics.ga4', trigger_confidence: 'exact', measurement_class: 'analytics', consent_required: ['analytics_storage'], outcome_when_denied: 'modeled_signal' },
+      { event_name: 'page_view', tag_id: '2', tag_name: 'Meta', provider_id: 'meta.pixel', trigger_confidence: 'exact', measurement_class: 'advertising', consent_required: ['ad_storage'], outcome_when_denied: 'blocked' },
+    ],
+  });
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].affected_opportunities, 6);
+  assert.equal(rows[1].affected_opportunities, 7);
+  assert.match(exposureCsv(rows), /measurement_opportunities,affected_opportunities/);
+  assert.throws(() => exposureRows({ ...result, group_by: 'day' }, { schema_version: '1.0', rules: [] }), /grouped by event/);
 });

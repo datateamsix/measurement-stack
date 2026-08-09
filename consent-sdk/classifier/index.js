@@ -19,7 +19,7 @@ function canonical(value) {
   return value;
 }
 
-function fingerprint(value) {
+export function fingerprint(value) {
   return createHash('sha256').update(JSON.stringify(canonical(value))).digest('hex');
 }
 
@@ -166,6 +166,8 @@ function recommendedAction(classification) {
 export function scanContainer(exported, options = {}) {
   const candidateRegistry = validateRegistry(options.registry || registry);
   const { tags, metadata } = parseContainerExport(exported);
+  const triggerById = new Map((parseContainerExport(exported).container.trigger || [])
+    .map((trigger) => [String(trigger.triggerId ?? trigger.trigger_id ?? ''), trigger]));
   const results = tags.map((tag) => {
     const classification = classifyTag(tag, candidateRegistry);
     return {
@@ -177,6 +179,16 @@ export function scanContainer(exported, options = {}) {
       existing_consent: {
         status: tag.consentSettings?.consentStatus ?? null,
         required: consentList(tag.consentSettings),
+      },
+      dependencies: {
+        firing_triggers: (tag.firingTriggerId || []).map((id) => ({
+          trigger_id: String(id),
+          trigger_name: triggerById.get(String(id))?.name || null,
+          trigger_type: triggerById.get(String(id))?.type || null,
+        })),
+        blocking_trigger_ids: (tag.blockingTriggerId || []).map(String),
+        setup_tag_ids: (tag.setupTag || []).map((item) => String(item.tagName || item.tagId || item)),
+        teardown_tag_ids: (tag.teardownTag || []).map((item) => String(item.tagName || item.tagId || item)),
       },
       ...classification,
       recommended_action: recommendedAction(classification),

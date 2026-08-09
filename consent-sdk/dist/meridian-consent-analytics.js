@@ -79,7 +79,7 @@
       autoPageView: input.autoPageView !== false,
       observeDataLayer: input.observeDataLayer !== false,
     };
-    trackedEvents = new Set((input.trackedEvents || [])
+    trackedEvents = new Set([...(input.trackedEvents || []), ...(input.impactManifest?.tracked_events || [])]
       .map((value) => String(value).trim().toLowerCase())
       .filter((value) => EVENT_PATTERN.test(value)));
     if (config.observeDataLayer && trackedEvents.size) observeDataLayer();

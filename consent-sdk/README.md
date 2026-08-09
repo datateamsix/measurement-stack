@@ -27,6 +27,10 @@ The banner above is rendered by the SDK on the included Measurement Stack sandbo
 - scans GTM container exports and classifies tags using a versioned provider registry;
 - creates an explicit approval manifest before applying any consent configuration;
 - preserves existing GTM triggers and never publishes a container.
+- migrates an existing GTM export into a reviewable consent-ready container package;
+- maps real tag triggers into a Consent Impact measurement-opportunity manifest;
+- honors Global Privacy Control and records policy state separately from Google consent;
+- creates local consent receipts and runs explicit withdrawal actions without a network dependency.
 
 Optional **Consent Impact Analytics** adds privacy-preserving aggregate counters and CLI reporting without enlarging or networking the core runtime. See [`analytics/README.md`](analytics/README.md).
 
@@ -51,6 +55,12 @@ The SVGs use system-font fallbacks so they render without external assets. Prese
 The browser runtime stays tiny. Provider detection and GTM modification run offline in Node.js and are never shipped to website visitors.
 
 ```bash
+meridian-consent
+
+meridian-consent migrate GTM-XXXX_workspace.json \
+  --profile strict-global \
+  --output-dir ./meridian-output
+
 meridian-consent scan GTM-XXXX_workspace.json --output scan.json
 meridian-consent plan scan.json --output approvals.json
 meridian-consent review approvals.json --output approvals.reviewed.json
@@ -63,6 +73,10 @@ meridian-consent analytics \
   --site example \
   --group-by day
 ```
+
+Running `meridian-consent` in a terminal opens the branded start menu. `migrate` is the recommended path; the lower-level commands remain available for pipelines and diagnosis. See [`docs/CLI.md`](docs/CLI.md) for every output and review mode.
+
+The migrator merges only the useful starter variables and triggers. It does not add the paused demonstration tags. Direct-SDK installations remain direct-SDK installations; GTM-native installations must import [`gtm/meridian-consent-template.tpl`](gtm/meridian-consent-template.tpl) separately because GTM custom-template permissions require an explicit human import and review.
 
 The workflow is deliberately gated:
 
@@ -160,7 +174,7 @@ Both use the same versioned envelope:
   event: 'meridian_consent_updated',
   meridian_consent: {
     schema_version: '1.0',
-    sdk_version: '0.1.1',
+    sdk_version: '0.2.0',
     policy_version: '1.0',
     consent_id: 'c59e7b09-...',
     revision_id: 'ad722e36-...',
@@ -220,6 +234,11 @@ Set `window.MeridianConsentConfig` before loading the SDK or pass the same shape
 | `googleConsent` | `true` | Directly issue Google consent commands |
 | `autoShow` | `true` | Show the banner when no valid choice exists |
 | `showGoogleKeys` | `true` | Show exact consent keys in the settings UI |
+| `policyProfile` | `strict-global` | Policy label stored with the choice: `strict-global`, `eu-uk-consent`, or `us-opt-out` |
+| `honorGpc` | `true` | Detect `navigator.globalPrivacyControl` |
+| `gpcLocksAdvertising` | `true` | Keep advertising consent denied while GPC is active |
+| `onReceipt` | empty | Optional local callback for the fixed consent-receipt envelope |
+| `revocationCookies` | `{}` | Allowlisted first-party cookie names to clear when a mapped purpose is withdrawn |
 | `privacyUrl` | empty | Privacy-policy link |
 | `cookieUrl` | empty | Cookie-policy link |
 | `copy` | built in | Override interface strings |
@@ -264,6 +283,13 @@ MeridianConsent.save({
 MeridianConsent.open();
 MeridianConsent.close();
 MeridianConsent.reset();
+MeridianConsent.getReceipt();
+MeridianConsent.gpcDetected();
+
+const removeRevocationAction = MeridianConsent.registerRevocationAction(({ withdrawn }) => {
+  // Call a documented vendor opt-out API here.
+  console.log(withdrawn);
+});
 
 const unsubscribe = MeridianConsent.subscribe((consent) => {
   console.log(consent.analytics_storage);
@@ -271,6 +297,8 @@ const unsubscribe = MeridianConsent.subscribe((consent) => {
 ```
 
 Missing or unrecognized values normalize to `denied`. Attempts to deny `security_storage` normalize to `granted`.
+
+GPC is represented as `sale_share_opt_out` and `targeted_advertising_opt_out` in the policy state and receipt. Those fields are deliberately separate from Google Consent Mode. With the default policy, active GPC also restricts the three advertising consent signals, but the concepts are not treated as legally interchangeable. See [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md).
 
 ## Build and test
 
@@ -288,17 +316,17 @@ The compressed JavaScript and CSS have a combined 12 KB gzip budget. The budget 
 
 - Treat `schema_version` as a public data contract; only change it for breaking payload changes.
 - Increment `policyVersion` when the disclosure or purposes materially change and renewed consent is required.
-- Keep SDK versions immutable on the CDN (`/consent/0.1.1/...`) and use a separately controlled alias only if rollback is immediate.
+- Keep SDK versions immutable on the CDN (`/consent/0.2.0/...`) and use a separately controlled alias only if rollback is immediate.
 - Test accept, reject, granular save, stored restore, withdrawal, keyboard navigation, and every vendor request in GTM Preview before publishing.
 - Review GTM Consent Overview so each non-Google tag declares its additional consent checks.
 
-## Deliberate non-goals for 0.1
+## Deliberate non-goals for 0.2
 
 - live GTM API access, workspace creation, versioning, or publishing;
 - runtime cookie crawling outside the imported container definition;
-- jurisdiction-specific legal decisions;
+- automatic jurisdiction-specific legal decisions;
 - cross-domain preference synchronization;
-- server-side consent receipt delivery;
+- built-in server-side consent receipt storage;
 - IAB TCF strings or Google publisher CMP certification;
 - silently blocking arbitrary scripts after the browser has already executed them.
 

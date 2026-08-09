@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import vm from 'node:vm';
 import { readFile } from 'node:fs/promises';
+import { webcrypto } from 'node:crypto';
 
 const source = await readFile(new URL('../src/meridian-consent.js', import.meta.url), 'utf8');
 const TYPES = [
@@ -14,15 +15,16 @@ const TYPES = [
   'ad_personalization',
 ];
 
-function browser(legacyChoice = null) {
+function browser(legacyChoice = null, settings = {}) {
   let cookie = '';
+  const events = [];
   const storage = new Map(legacyChoice ? [['meridian_consent_v1', JSON.stringify(legacyChoice)]] : []);
   const dataLayer = [];
   const window = {
     dataLayer,
-    MeridianConsentConfig: { autoShow: false },
+    MeridianConsentConfig: { autoShow: false, ...(settings.config || {}) },
     addEventListener() {},
-    dispatchEvent() {},
+    dispatchEvent(event) { events.push(event); },
   };
   const document = {
     currentScript: { dataset: {} },
@@ -48,7 +50,10 @@ function browser(legacyChoice = null) {
     Number,
     Boolean,
     Set,
+    Uint32Array,
     TypeError,
+    crypto: webcrypto,
+    navigator: { globalPrivacyControl: settings.gpc === true },
     localStorage: {
       getItem(key) { return storage.get(key) || null; },
       removeItem(key) { storage.delete(key); },
@@ -57,7 +62,7 @@ function browser(legacyChoice = null) {
     decodeURIComponent,
   });
   vm.runInContext(source, context);
-  return { window, document, dataLayer, cookie: () => cookie, storage };
+  return { window, document, dataLayer, cookie: () => cookie, storage, events };
 }
 
 test('initializes denied-by-default before emitting the ready event', () => {
@@ -70,7 +75,7 @@ test('initializes denied-by-default before emitting the ready event', () => {
   assert.equal(defaultCommand[2].security_storage, 'granted');
   for (const type of TYPES.filter((type) => type !== 'security_storage')) assert.equal(defaultCommand[2][type], 'denied');
   assert.equal(ready.meridian_consent.has_choice, false);
-  assert.equal(window.MeridianConsent.version, '0.1.1');
+  assert.equal(window.MeridianConsent.version, '0.2.0');
 });
 
 test('saves a granular choice, updates Google, and emits one stable GTM envelope', () => {
@@ -116,4 +121,32 @@ test('migrates the previous site choice into the Meridian cookie once', () => {
   assert.equal(current.states.ad_storage, 'denied');
   assert.match(cookie(), /^meridian_consent=/);
   assert.equal(storage.has('meridian_consent_v1'), false);
+});
+
+test('GPC remains a distinct policy signal and locks advertising consent', () => {
+  const { window, dataLayer } = browser(null, { gpc: true });
+  const accepted = window.MeridianConsent.acceptAll();
+  assert.equal(accepted.policy.gpc_detected, true);
+  assert.equal(accepted.policy.sale_share_opt_out, true);
+  assert.equal(accepted.states.analytics_storage, 'granted');
+  assert.equal(accepted.states.ad_storage, 'denied');
+  assert.equal(accepted.states.ad_user_data, 'denied');
+  assert.equal(accepted.states.ad_personalization, 'denied');
+  const update = dataLayer.findLast((entry) => entry.event === 'meridian_consent_updated');
+  assert.equal(update.meridian_consent.gpc_detected, true);
+  assert.equal(update.meridian_consent.sale_share_opt_out, true);
+});
+
+test('receipt and revocation hooks report withdrawals without network calls', () => {
+  const receipts = [];
+  const { window, events } = browser(null, { config: { onReceipt: (receipt) => receipts.push(receipt) } });
+  const revocations = [];
+  window.MeridianConsent.registerRevocationAction((detail) => revocations.push(detail));
+  window.MeridianConsent.acceptAll();
+  window.MeridianConsent.rejectOptional();
+  assert.equal(receipts.length, 2);
+  assert.equal(receipts[1].source, 'api_reject_optional');
+  assert.ok(revocations[0].withdrawn.includes('analytics_storage'));
+  assert.ok(events.some(({ type }) => type === 'meridian:consent-receipt'));
+  assert.ok(events.some(({ type }) => type === 'meridian:consent-revoked'));
 });

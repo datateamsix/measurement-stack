@@ -77,3 +77,59 @@ export function summaryCsv(result) {
     ...rows.map((row) => columns.map((column) => csvCell(row[column])).join(',')),
   ].join('\n') + '\n';
 }
+
+function affectedCount(row, rule) {
+  if (rule.outcome_when_denied === 'modeled_signal') return Number(row.consent_denied_events || 0);
+  if (rule.outcome_when_denied === 'blocked') {
+    const advertising = rule.consent_required?.some((type) => type.startsWith('ad_'));
+    return Number(advertising ? row.advertising_blocked_events : row.consent_denied_events || 0);
+  }
+  return 0;
+}
+
+export function exposureRows(result, manifest) {
+  if (result?.group_by !== 'event') throw new TypeError('Exposure analysis requires analytics grouped by event.');
+  if (manifest?.schema_version !== '1.0' || !Array.isArray(manifest.rules)) throw new TypeError('Invalid Meridian impact manifest.');
+  const rulesByEvent = new Map();
+  for (const rule of manifest.rules) {
+    if (!rulesByEvent.has(rule.event_name)) rulesByEvent.set(rule.event_name, []);
+    rulesByEvent.get(rule.event_name).push(rule);
+  }
+  return result.rows.flatMap((row) => (rulesByEvent.get(row.dimension) || []).map((rule) => ({
+    schema_version: '1.0',
+    site_id: result.site_id,
+    period_start: result.from,
+    period_end: result.to,
+    event_name: row.dimension,
+    tag_id: rule.tag_id,
+    tag_name: rule.tag_name,
+    provider_id: rule.provider_id,
+    trigger_confidence: rule.trigger_confidence,
+    measurement_class: rule.measurement_class,
+    consent_required: (rule.consent_required || []).join('|'),
+    outcome_when_denied: rule.outcome_when_denied,
+    measurement_opportunities: Number(row.total_events || 0),
+    affected_opportunities: affectedCount(row, rule),
+  })));
+}
+
+export function exposureCsv(rows) {
+  const columns = [
+    'schema_version', 'site_id', 'period_start', 'period_end', 'event_name',
+    'tag_id', 'tag_name', 'provider_id', 'trigger_confidence', 'measurement_class',
+    'consent_required', 'outcome_when_denied', 'measurement_opportunities', 'affected_opportunities',
+  ];
+  return `${columns.join(',')}\n${rows.map((row) => columns.map((column) => csvCell(row[column])).join(',')).join('\n')}\n`;
+}
+
+export function exposureTable(rows) {
+  return rows.map((row) => ({
+    Event: row.event_name,
+    Tag: row.tag_name,
+    Provider: row.provider_id || 'Unknown',
+    Outcome: row.outcome_when_denied,
+    Opportunities: row.measurement_opportunities,
+    Affected: row.affected_opportunities,
+    Confidence: row.trigger_confidence,
+  }));
+}

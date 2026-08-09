@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '0.1.1';
+  const VERSION = '0.2.0';
   const SCHEMA_VERSION = '1.0';
   const CONSENT_TYPES = Object.freeze([
     'security_storage',
@@ -25,6 +25,7 @@
     manage: 'Manage settings',
     save: 'Save choices',
     close: 'Close consent settings',
+    gpcHonored: 'Your browser opt-out preference is honored. Advertising choices are restricted.',
   });
   const CATEGORY_COPY = Object.freeze({
     security_storage: ['Security storage', 'Supports authentication, fraud prevention, and user protection.'],
@@ -44,6 +45,11 @@
     googleConsent: true,
     autoShow: true,
     showGoogleKeys: true,
+    policyProfile: 'strict-global',
+    honorGpc: true,
+    gpcLocksAdvertising: true,
+    onReceipt: null,
+    revocationCookies: {},
     privacyUrl: '',
     cookieUrl: '',
     copy: {},
@@ -56,6 +62,7 @@
   let initialized = false;
   let returnFocus = null;
   const listeners = new Set();
+  const revocationHandlers = new Set();
 
   const safeJson = (value, fallback = null) => {
     try { return value ? JSON.parse(value) : fallback; } catch (_) { return fallback; }
@@ -68,7 +75,11 @@
 
   const uid = () => {
     if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
-    return `mrc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 12)}`;
+    if (globalThis.crypto?.getRandomValues) {
+      const values = globalThis.crypto.getRandomValues(new Uint32Array(4));
+      return `mrc_${[...values].map((value) => value.toString(16).padStart(8, '0')).join('')}`;
+    }
+    throw new Error('Meridian Consent requires Web Crypto to create consent receipt identifiers.');
   };
 
   const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, (character) => ({
@@ -83,10 +94,30 @@
     } catch (_) { return ''; }
   };
 
-  const state = (input = {}) => Object.fromEntries(CONSENT_TYPES.map((type) => [
-    type,
-    type === 'security_storage' || input[type] === true || input[type] === 'granted' ? 'granted' : 'denied',
-  ]));
+  const gpcDetected = () => config?.honorGpc !== false && globalThis.navigator?.globalPrivacyControl === true;
+
+  const state = (input = {}) => {
+    const states = Object.fromEntries(CONSENT_TYPES.map((type) => [
+      type,
+      type === 'security_storage' || input[type] === true || input[type] === 'granted' ? 'granted' : 'denied',
+    ]));
+    if (gpcDetected() && config?.gpcLocksAdvertising !== false) {
+      states.ad_storage = 'denied';
+      states.ad_user_data = 'denied';
+      states.ad_personalization = 'denied';
+    }
+    return states;
+  };
+
+  function policyState() {
+    const detected = gpcDetected();
+    return {
+      profile: config.policyProfile,
+      gpc_detected: detected,
+      sale_share_opt_out: detected,
+      targeted_advertising_opt_out: detected,
+    };
+  }
 
   function scriptConfig() {
     const script = document.currentScript || [...document.scripts].find((item) => /meridian-consent(?:\.min)?\.js/.test(item.src));
@@ -132,7 +163,7 @@
   function storedChoice() {
     const stored = readCookie(config.cookieName);
     if (stored && stored.schema_version === SCHEMA_VERSION && stored.policy_version === config.policyVersion) {
-      return { ...stored, states: state(stored.states), has_choice: true };
+      return { ...stored, states: state(stored.states), policy: policyState(), has_choice: true };
     }
     return migrateLegacyChoice();
   }
@@ -179,6 +210,9 @@
         occurred_at: record.occurred_at,
         source,
         has_choice: record.has_choice,
+        policy_profile: record.policy.profile,
+        gpc_detected: record.policy.gpc_detected,
+        sale_share_opt_out: record.policy.sale_share_opt_out,
         ...record.states,
       },
     };
@@ -202,15 +236,70 @@
       occurred_at: new Date().toISOString(),
       has_choice: hasChoice,
       states: state(states),
+      policy: policyState(),
     };
   }
 
+  function receiptFor(record, source) {
+    return Object.freeze({
+      schema_version: SCHEMA_VERSION,
+      receipt_id: record.revision_id,
+      consent_id: record.consent_id,
+      policy_version: record.policy_version,
+      policy_profile: record.policy.profile,
+      occurred_at: record.occurred_at,
+      source,
+      gpc_detected: record.policy.gpc_detected,
+      sale_share_opt_out: record.policy.sale_share_opt_out,
+      targeted_advertising_opt_out: record.policy.targeted_advertising_opt_out,
+      states: Object.freeze({ ...record.states }),
+    });
+  }
+
+  function publishReceipt(record, source) {
+    const receipt = receiptFor(record, source);
+    window.dispatchEvent(new CustomEvent('meridian:consent-receipt', { detail: receipt }));
+    if (typeof config.onReceipt === 'function') {
+      try { config.onReceipt(receipt); } catch (_) { /* Integration callbacks cannot cancel consent updates. */ }
+    }
+    return receipt;
+  }
+
+  function clearKnownCookie(entry) {
+    const item = typeof entry === 'string' ? { name: entry } : entry;
+    if (!item || !/^[A-Za-z0-9_.-]{1,128}$/.test(item.name || '')) return false;
+    const path = typeof item.path === 'string' && item.path.startsWith('/') ? item.path : '/';
+    const domain = typeof item.domain === 'string' && /^[A-Za-z0-9.-]+$/.test(item.domain) ? `; Domain=${item.domain}` : '';
+    document.cookie = `${encodeURIComponent(item.name)}=; Path=${path}${domain}; Max-Age=0; SameSite=Lax`;
+    return true;
+  }
+
+  function runRevocations(previous, next, source) {
+    if (!previous?.has_choice) return;
+    const withdrawn = OPTIONAL_TYPES.filter((type) => previous.states[type] === 'granted' && next.states[type] === 'denied');
+    if (!withdrawn.length) return;
+    const cleared = [];
+    for (const type of withdrawn) {
+      for (const cookie of config.revocationCookies?.[type] || []) {
+        if (clearKnownCookie(cookie)) cleared.push(typeof cookie === 'string' ? cookie : cookie.name);
+      }
+    }
+    const detail = Object.freeze({ withdrawn: Object.freeze(withdrawn), cleared_cookies: Object.freeze(cleared), source, receipt: receiptFor(next, source) });
+    for (const handler of revocationHandlers) {
+      try { handler(detail); } catch (_) { /* One vendor callback cannot block the rest. */ }
+    }
+    window.dispatchEvent(new CustomEvent('meridian:consent-revoked', { detail }));
+  }
+
   function apply(input, source = 'api') {
+    const previous = current;
     const next = recordFor(input, true, current || {});
     writeCookie(next);
     current = next;
     callGoogle('update', next.states);
     emit('meridian_consent_updated', source, next);
+    publishReceipt(next, source);
+    runRevocations(previous, next, source);
     syncForm();
     hideBanner();
     closeSettings();
@@ -232,7 +321,8 @@
   function categoryMarkup(type) {
     const [title, description] = config.categories[type] || CATEGORY_COPY[type];
     const required = type === 'security_storage';
-    return `<div class="mrc-option"><div><label for="mrc-${type}">${escapeHtml(title)}</label>${config.showGoogleKeys ? `<code>${type}</code>` : ''}<p>${escapeHtml(description)}</p></div><label class="mrc-switch"><span class="mrc-sr">${escapeHtml(title)}</span><input id="mrc-${type}" name="${type}" type="checkbox"${required ? ' checked disabled' : ''}><span aria-hidden="true"></span></label></div>`;
+    const gpcLocked = gpcDetected() && config.gpcLocksAdvertising !== false && ['ad_storage', 'ad_user_data', 'ad_personalization'].includes(type);
+    return `<div class="mrc-option"><div><label for="mrc-${type}">${escapeHtml(title)}</label>${config.showGoogleKeys ? `<code>${type}</code>` : ''}<p>${escapeHtml(description)}</p></div><label class="mrc-switch"><span class="mrc-sr">${escapeHtml(title)}</span><input id="mrc-${type}" name="${type}" type="checkbox"${required ? ' checked disabled' : ''}${gpcLocked ? ' disabled' : ''}><span aria-hidden="true"></span></label></div>`;
   }
 
   function ensureUi() {
@@ -245,7 +335,7 @@
     const root = document.createElement('div');
     root.id = 'mrc-root';
     root.style.cssText = themeStyle();
-    root.innerHTML = `<aside class="mrc-banner" aria-label="Cookie preferences" aria-live="polite" hidden><div><strong>${escapeHtml(config.copy.title)}</strong><p>${escapeHtml(config.copy.bannerText)}</p>${links ? `<nav>${links}</nav>` : ''}</div><div class="mrc-actions"><button type="button" data-mrc-action="reject">${escapeHtml(config.copy.rejectOptional)}</button><button type="button" data-mrc-open>${escapeHtml(config.copy.manage)}</button><button type="button" class="mrc-primary" data-mrc-action="accept">${escapeHtml(config.copy.acceptAll)}</button></div></aside><div class="mrc-backdrop" hidden><section class="mrc-dialog" role="dialog" aria-modal="true" aria-labelledby="mrc-title" tabindex="-1"><header><div><small>Privacy choices</small><h2 id="mrc-title">${escapeHtml(config.copy.title)}</h2></div><button class="mrc-close" type="button" aria-label="${escapeHtml(config.copy.close)}">&times;</button></header><p class="mrc-intro">${escapeHtml(config.copy.settingsIntro)}</p><form><div class="mrc-list">${CONSENT_TYPES.map(categoryMarkup).join('')}</div><div class="mrc-footer">${links ? `<nav>${links}</nav>` : '<span></span>'}<div class="mrc-actions"><button type="button" data-mrc-action="reject">${escapeHtml(config.copy.rejectOptional)}</button><button type="button" data-mrc-action="accept">${escapeHtml(config.copy.acceptAll)}</button><button class="mrc-primary" type="submit">${escapeHtml(config.copy.save)}</button></div></div></form></section></div>`;
+    root.innerHTML = `<aside class="mrc-banner" aria-label="Cookie preferences" aria-live="polite" hidden><div><strong>${escapeHtml(config.copy.title)}</strong><p>${escapeHtml(config.copy.bannerText)}</p>${links ? `<nav>${links}</nav>` : ''}</div><div class="mrc-actions"><button type="button" data-mrc-action="reject">${escapeHtml(config.copy.rejectOptional)}</button><button type="button" data-mrc-open>${escapeHtml(config.copy.manage)}</button><button type="button" class="mrc-primary" data-mrc-action="accept">${escapeHtml(config.copy.acceptAll)}</button></div></aside><div class="mrc-backdrop" hidden><section class="mrc-dialog" role="dialog" aria-modal="true" aria-labelledby="mrc-title" tabindex="-1"><header><div><small>Privacy choices</small><h2 id="mrc-title">${escapeHtml(config.copy.title)}</h2></div><button class="mrc-close" type="button" aria-label="${escapeHtml(config.copy.close)}">&times;</button></header><p class="mrc-intro">${escapeHtml(config.copy.settingsIntro)}</p>${gpcDetected() ? `<p class="mrc-gpc" role="status">${escapeHtml(config.copy.gpcHonored)}</p>` : ''}<form><div class="mrc-list">${CONSENT_TYPES.map(categoryMarkup).join('')}</div><div class="mrc-footer">${links ? `<nav>${links}</nav>` : '<span></span>'}<div class="mrc-actions"><button type="button" data-mrc-action="reject">${escapeHtml(config.copy.rejectOptional)}</button><button type="button" data-mrc-action="accept">${escapeHtml(config.copy.acceptAll)}</button><button class="mrc-primary" type="submit">${escapeHtml(config.copy.save)}</button></div></div></form></section></div>`;
     document.body.appendChild(root);
 
     root.querySelectorAll('[data-mrc-action="accept"]').forEach((button) => button.addEventListener('click', () => apply(all(true), 'accept_all')));
@@ -327,14 +417,18 @@
       occurred_at: current.occurred_at,
       has_choice: current.has_choice,
       states: Object.freeze({ ...current.states }),
+      policy: Object.freeze({ ...current.policy }),
     });
   }
 
   function reset() {
+    const previous = current;
     removeCookie();
     current = recordFor(DENIED_DEFAULTS, false);
     callGoogle('update', current.states);
     emit('meridian_consent_updated', 'reset', current);
+    publishReceipt(current, 'reset');
+    runRevocations(previous, current, 'reset');
     showBanner();
     return getState();
   }
@@ -366,6 +460,13 @@
     close: closeSettings,
     reset,
     has: (type) => CONSENT_TYPES.includes(type) && current?.states[type] === 'granted',
+    getReceipt: () => current ? receiptFor(current, current.has_choice ? 'current_choice' : 'default') : null,
+    gpcDetected,
+    registerRevocationAction(handler) {
+      if (typeof handler !== 'function') throw new TypeError('Revocation action must be a function.');
+      revocationHandlers.add(handler);
+      return () => revocationHandlers.delete(handler);
+    },
     subscribe(listener) {
       if (typeof listener !== 'function') throw new TypeError('Consent subscriber must be a function.');
       listeners.add(listener);

@@ -19,7 +19,7 @@ Measurement Stack is a fictitious SaaS product and practical measurement-enginee
 - Verified Stripe webhook and purchase event
 - Canonical sGTM relay for lead and purchase events
 - Browser/server deduplication using a shared `event_id`
-- Standalone **Meridian Consent** SDK, GTM starter kit, and container-classification CLI in [`consent-sdk/`](consent-sdk/README.md)
+- Standalone **Meridian Consent** SDK and branded CLI for consent-ready GTM migration, validation, disclosure inventory, and impact analytics in [`consent-sdk/`](consent-sdk/README.md)
 - Production pages load Meridian Consent synchronously before GTM from `public/consent/`; rebuild and sync those browser assets with `npm run build:consent`
 
 ## Meridian Consent
@@ -28,7 +28,7 @@ Measurement Stack is a fictitious SaaS product and practical measurement-enginee
   <img src="consent-sdk/assets/meridian-consent-logo.svg" alt="Meridian Consent" width="390">
 </p>
 
-Meridian is the measurement operating system within this sandbox. Meridian Consent is its focused consent product: a dependency-free browser runtime paired with GTM governance, consent-impact collection, and CLI analysis. See the [`consent-sdk` documentation](consent-sdk/README.md) for installation, architecture, and brand assets.
+Meridian is the measurement operating system within this sandbox. Meridian Consent is its focused consent product: a dependency-free browser runtime paired with GTM migration and governance, GPC-aware consent evidence, withdrawal actions, consent-impact collection, and CLI analysis. See the [`consent-sdk` documentation](consent-sdk/README.md) for installation, architecture, and brand assets.
 
 ### Consent experience
 
