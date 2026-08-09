@@ -30,6 +30,16 @@ Measurement Stack is a fictitious SaaS product and practical measurement-enginee
 
 Meridian is the measurement operating system within this sandbox. Meridian Consent is its focused consent product: a dependency-free browser runtime paired with GTM governance, consent-impact collection, and CLI analysis. See the [`consent-sdk` documentation](consent-sdk/README.md) for installation, architecture, and brand assets.
 
+### Consent experience
+
+The initial banner provides a clear accept, reject, or manage-preferences path:
+
+![Meridian Consent banner running in the Measurement Stack sandbox](consent-sdk/assets/meridian-consent-banner.png)
+
+The granular settings dialog maps each control directly to a Google Consent Mode consent type:
+
+![Meridian Consent granular consent settings](consent-sdk/assets/meridian-consent-settings.png)
+
 ## Product pages
 
 ```text

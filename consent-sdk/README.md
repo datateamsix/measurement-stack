@@ -8,6 +8,12 @@ A small, dependency-free consent runtime and an auditable Google Tag Manager gov
 
 The design goal is deliberately narrow: establish consent before measurement, collect an understandable choice, persist it without identity data, and make the state easy to consume everywhere else.
 
+![Meridian Consent banner running in the Measurement Stack sandbox](assets/meridian-consent-banner.png)
+
+The banner above is rendered by the SDK on the included Measurement Stack sandbox. Its copy and theme are configurable without changing the consent contract. Visitors can open the granular settings dialog to control each optional Google Consent Mode consent type directly:
+
+![Meridian Consent granular consent settings](assets/meridian-consent-settings.png)
+
 ## What it does
 
 - Maps the interface one-to-one to all seven Google consent types.
