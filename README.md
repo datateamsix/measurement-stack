@@ -47,6 +47,7 @@ The granular settings dialog maps each control directly to a Google Consent Mode
 /pricing.html           Starter, Growth, and Scale plans
 /sign-in.html           Clerk authentication
 /app.html               Authenticated identity workspace
+/meridian/consent-studio/  Authenticated Meridian Consent Studio
 /checkout-success.html  Stripe test conversion inspection
 ```
 
@@ -61,6 +62,15 @@ POST /api/checkout
 GET  /api/checkout-session
 POST /api/stripe-webhook
 GET  /api/health
+GET  /api/integrations/google/authorize
+GET  /api/integrations/google/callback
+GET  /api/integrations/google/status
+POST /api/integrations/google/disconnect
+GET  /api/integrations/gtm/accounts
+GET  /api/integrations/gtm/containers
+GET  /api/integrations/gtm/workspaces
+GET  /api/integrations/gtm/resources
+POST /api/integrations/gtm/test
 ```
 
 ## Identity model
@@ -92,12 +102,18 @@ npm install
 npm test
 ```
 
+`npm test` also builds and validates Meridian Studio at its canonical
+`/meridian/consent-studio/` path.
+
 Local Cloudflare preview:
 
 ```bash
-cp .dev.vars.example .dev.vars
 npm run dev
 ```
+
+For the least-privilege Google Tag Manager OAuth test, follow
+[`docs/gtm-oauth-testing.md`](docs/gtm-oauth-testing.md). The integration requests
+container edit access but exposes no versioning, approval, or publish route.
 
 ## Cloudflare deployment
 

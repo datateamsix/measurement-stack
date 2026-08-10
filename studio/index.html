@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Meridian Consent implementation, monitoring, and governance workspace." />
+    <meta name="theme-color" content="#0d0f12" />
+    <link rel="icon" href="./favicon.svg" />
+    <link rel="stylesheet" href="/consent/meridian-consent.min.css?v=0.3.0" />
+    <title>Meridian Consent Studio</title>
+    <script>
+      window.MeridianConsentConfig = {
+        policyVersion: "1.0",
+        googleConsent: true,
+        waitForUpdate: 500,
+      };
+    </script>
+    <script src="/consent/meridian-consent.min.js?v=0.3.0"></script>
+    <script src="/core.js?v=20260810a" defer></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

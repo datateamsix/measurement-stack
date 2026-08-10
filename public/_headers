@@ -10,6 +10,12 @@
 /*.js
   Cache-Control: no-cache, must-revalidate
 
+/meridian/consent-studio/
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/meridian/consent-studio/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin

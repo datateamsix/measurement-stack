@@ -20,6 +20,13 @@ export function onRequestGet({ env }) {
       stripe: stripeStatus.secretKey && stripeStatus.growthPrice && stripeStatus.scalePrice,
       stripeStatus,
       sgtm: Boolean(env.SGTM_EVENT_ENDPOINT),
+      googleTagManager: Boolean(
+        env.GOOGLE_CLIENT_ID
+        && env.GOOGLE_CLIENT_SECRET
+        && env.GOOGLE_OAUTH_REDIRECT_URI
+        && env.OAUTH_TOKEN_ENCRYPTION_KEY
+        && d1
+      ),
       genericWebhook: Boolean(env.LEAD_WEBHOOK_URL),
       networkContext: true,
     },

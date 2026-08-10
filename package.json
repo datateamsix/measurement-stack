@@ -3,10 +3,20 @@
   "version": "2.1.0",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "studio"
+  ],
+  "devDependencies": {
+    "wrangler": "latest"
+  },
   "scripts": {
-    "test": "node scripts/validate.mjs && node --test",
+    "test": "node scripts/validate.mjs && node --test && npm run test:studio",
     "build:consent": "npm --prefix consent-sdk run build && node scripts/sync-consent-assets.mjs",
-    "dev": "npx wrangler pages dev public",
-    "deploy": "npx wrangler pages deploy public --project-name=measurement-stack-leadgen"
+    "build:studio": "npm --prefix studio run build",
+    "test:studio": "npm --prefix studio test",
+    "oauth:setup": "node scripts/setup-google-oauth-local.mjs",
+    "db:migrate:local": "wrangler d1 migrations apply measurement-stack-identity --local",
+    "dev": "WRANGLER_LOG_PATH=.wrangler/wrangler.log wrangler pages dev public --port 3000",
+    "deploy": "npm run build:studio && WRANGLER_LOG_PATH=.wrangler/wrangler.log wrangler pages deploy public --project-name=measurement-stack-leadgen"
   }
 }
