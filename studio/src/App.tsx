@@ -10,12 +10,33 @@ declare global {
     MeasurementStack?: {
       ready: Promise<{ clerkPublishableKey?: string }>;
       loadClerk: () => Promise<{ configured: boolean; clerk: { isSignedIn?: boolean } | null; error?: string }>;
+      authFetch?: (url: string, options?: RequestInit) => Promise<Response>;
     };
   }
 }
 
 type View = "workspace" | "scans" | "tagging" | "analytics" | "integrations" | "compliance" | "projects" | "profiles" | "settings";
 type IntegrationDetail = "gtm" | null;
+
+type GtmAccount = { accountId?: string; name?: string };
+type GtmContainer = { containerId?: string; name?: string; publicId?: string };
+type GtmWorkspace = { workspaceId?: string; name?: string };
+type GtmTestResult = {
+  ok?: boolean;
+  dryRun?: boolean;
+  confirmationRequired?: string;
+  plan?: string[];
+  error?: string;
+  evidence?: unknown;
+  cleanupRequired?: boolean;
+  steps?: unknown;
+};
+
+async function studioAuthFetch(url: string, options?: RequestInit) {
+  const runtime = window.MeasurementStack;
+  if (!runtime?.authFetch) throw new Error("Measurement Stack auth runtime is unavailable.");
+  return runtime.authFetch(url, options);
+}
 
 const nav: { id: View; label: string; glyph: string }[] = [
   { id: "workspace", label: "Workspace", glyph: "⌂" },
@@ -125,6 +146,50 @@ export default function Home() {
     return () => { active = false; };
   }, []);
 
+  useEffect(() => {
+    if (authState !== "ready") return;
+    const params = new URLSearchParams(location.search);
+    const integration = params.get("integration");
+    const gtmStatus = params.get("gtm_status");
+    const gtmError = params.get("gtm_error");
+    if (integration === "gtm") {
+      setView("integrations");
+      setIntegrationDetail("gtm");
+    }
+    if (gtmStatus === "connected") {
+      setConnectedServices((items) => (items.includes("Google Tag Manager") ? items : [...items, "Google Tag Manager"]));
+      setIntegrationNotice("Google Tag Manager connected · just now");
+    } else if (gtmStatus === "error") {
+      setIntegrationNotice(`Google authorization failed${gtmError ? `: ${gtmError}` : ""}`);
+    }
+    if (integration || gtmStatus || gtmError) {
+      const clean = new URL(location.href);
+      clean.searchParams.delete("gtm_status");
+      clean.searchParams.delete("gtm_error");
+      history.replaceState({}, "", `${clean.pathname}${clean.search}${clean.hash}`);
+    }
+  }, [authState]);
+
+  useEffect(() => {
+    if (authState !== "ready" || view !== "integrations") return;
+    let active = true;
+    async function refreshGtmStatus() {
+      try {
+        const response = await studioAuthFetch("/api/integrations/google/status");
+        const body = await response.json().catch(() => ({}));
+        if (!active || !response.ok) return;
+        if (body.connected) {
+          setConnectedServices((items) => (items.includes("Google Tag Manager") ? items : [...items, "Google Tag Manager"]));
+          setIntegrationNotice((notice) => (notice.includes("failed") ? notice : "Google Tag Manager connected"));
+        }
+      } catch {
+        // Status refresh is best-effort; the GTM detail view surfaces failures.
+      }
+    }
+    void refreshGtmStatus();
+    return () => { active = false; };
+  }, [authState, view]);
+
   const pageTitle = useMemo(() => nav.find((item) => item.id === view)?.label || "Studio", [view]);
 
   function runScan() {
@@ -159,6 +224,15 @@ export default function Home() {
       setIntegrationNotice(`${service} ${connected ? "disconnected" : "connected"} · just now`);
       return connected ? items.filter((item) => item !== service) : [...items, service];
     });
+  }
+
+  function handleGtmConnectionChange(connected: boolean, notice?: string) {
+    setConnectedServices((items) => {
+      const has = items.includes("Google Tag Manager");
+      if (connected) return has ? items : [...items, "Google Tag Manager"];
+      return has ? items.filter((item) => item !== "Google Tag Manager") : items;
+    });
+    if (notice) setIntegrationNotice(notice);
   }
 
   const visibleTechnologies = technologies.filter((item) => {
@@ -216,7 +290,12 @@ export default function Home() {
           <div className="metric-grid"><Metric value="—" label="Consent rate" note="Awaiting collector data" /><Metric value="—" label="Analytics retained" note="Consent impact estimate" /><Metric value="—" label="Ad eligibility" note="Consent impact estimate" /><Metric value="0" label="Implementation alerts" note="No active data source" /></div>
           <section className="dashboard-card empty-analytics"><div className="chart-placeholder"><div className="fake-chart"><i/><i/><i/><i/><i/><i/><i/><i/></div><span>CONSENT TREND</span></div><div><Badge tone="coming">Analytics placeholder</Badge><h2>Connect Consent Impact collection</h2><p>This area will monitor consent choices, measurement availability, regional behavior, and implementation health without collecting raw identifiers.</p><button className="secondary-button" onClick={() => setView("integrations")}>Configure data sources</button></div></section>
         </>}
-        {view === "integrations" && integrationDetail === "gtm" && <GtmIntegration onBack={() => setIntegrationDetail(null)} />}
+        {view === "integrations" && integrationDetail === "gtm" && (
+          <GtmIntegration
+            onBack={() => setIntegrationDetail(null)}
+            onConnectionChange={handleGtmConnectionChange}
+          />
+        )}
         {view === "integrations" && integrationDetail === null && <>
           <Header eyebrow="Connected systems" title="Integrations" description="Connect measurement platforms and choose where Meridian stores consent receipts, scan evidence, and audit records." action={<button className="primary-button page-action">Add integration</button>} />
           <div className="integration-summary"><div><span className="health-dot"/><p><strong>{integrationNotice}</strong><small>Connection credentials are handled server-side and never exposed in the consent SDK.</small></p></div><Badge tone="good">Systems healthy</Badge></div>
@@ -280,8 +359,15 @@ export default function Home() {
   </main>;
 }
 
-function GtmIntegration({ onBack }: { onBack: () => void }) {
+function GtmIntegration({
+  onBack,
+  onConnectionChange,
+}: {
+  onBack: () => void;
+  onConnectionChange?: (connected: boolean, notice?: string) => void;
+}) {
   const requiredScope = "https://www.googleapis.com/auth/tagmanager.edit.containers";
+  const confirmationPhrase = "RUN MERIDIAN GTM TEST";
   const permissionRows = [
     ["GTM account", "User", "Required", "Lists accessible accounts and basic account metadata."],
     ["GTM account", "Administrator", "Not requested", "Would allow container creation and user-permission management."],
@@ -304,17 +390,260 @@ function GtmIntegration({ onBack }: { onBack: () => void }) {
     ["05", "Verify the publish boundary", "Confirm no publish or container-version scope was granted and retain the test audit record."],
   ];
 
+  const onConnectionChangeRef = useRef(onConnectionChange);
+  onConnectionChangeRef.current = onConnectionChange;
+
+  const [status, setStatus] = useState<"loading" | "connected" | "disconnected" | "error">("loading");
+  const [error, setError] = useState("");
+  const [accounts, setAccounts] = useState<GtmAccount[]>([]);
+  const [containers, setContainers] = useState<GtmContainer[]>([]);
+  const [workspaces, setWorkspaces] = useState<GtmWorkspace[]>([]);
+  const [accountId, setAccountId] = useState("");
+  const [containerId, setContainerId] = useState("");
+  const [workspaceId, setWorkspaceId] = useState("");
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
+  const [loadingContainers, setLoadingContainers] = useState(false);
+  const [loadingWorkspaces, setLoadingWorkspaces] = useState(false);
+  const [testPhase, setTestPhase] = useState<"idle" | "planned" | "running" | "passed" | "failed">("idle");
+  const [testPlan, setTestPlan] = useState<string[]>([]);
+  const [testMessage, setTestMessage] = useState("");
+  const connected = status === "connected";
+  const canRunTest = connected && Boolean(accountId && containerId) && testPhase !== "running";
+
+  useEffect(() => {
+    let active = true;
+    async function loadStatus() {
+      try {
+        const response = await studioAuthFetch("/api/integrations/google/status");
+        const body = await response.json().catch(() => ({}));
+        if (!active) return;
+        if (!response.ok) throw new Error(body.error || "Could not verify Google connection status.");
+        if (body.connected) {
+          setStatus("connected");
+          onConnectionChangeRef.current?.(true, "Google Tag Manager connected · just now");
+          setLoadingAccounts(true);
+          const accountsResponse = await studioAuthFetch("/api/integrations/gtm/accounts");
+          const accountsBody = await accountsResponse.json().catch(() => ({}));
+          if (!active) return;
+          if (!accountsResponse.ok) throw new Error(accountsBody.error || "Could not list GTM accounts.");
+          const list = Array.isArray(accountsBody.accounts) ? accountsBody.accounts as GtmAccount[] : [];
+          setAccounts(list);
+          setAccountId(list[0]?.accountId || "");
+          setError("");
+        } else {
+          setStatus("disconnected");
+          onConnectionChangeRef.current?.(false);
+        }
+      } catch (loadError) {
+        if (!active) return;
+        setStatus("error");
+        setError(loadError instanceof Error ? loadError.message : "Connection status unavailable.");
+      } finally {
+        if (active) setLoadingAccounts(false);
+      }
+    }
+    void loadStatus();
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!connected || !accountId) {
+      setContainers([]);
+      setContainerId("");
+      return;
+    }
+    let active = true;
+    setLoadingContainers(true);
+    async function loadContainers() {
+      try {
+        const response = await studioAuthFetch(`/api/integrations/gtm/containers?accountId=${encodeURIComponent(accountId)}`);
+        const body = await response.json().catch(() => ({}));
+        if (!active) return;
+        if (!response.ok) throw new Error(body.error || "Could not list GTM containers.");
+        const list = Array.isArray(body.containers) ? body.containers as GtmContainer[] : [];
+        setContainers(list);
+        setContainerId(list[0]?.containerId || "");
+        setError("");
+      } catch (loadError) {
+        if (!active) return;
+        setContainers([]);
+        setContainerId("");
+        setError(loadError instanceof Error ? loadError.message : "Could not list GTM containers.");
+      } finally {
+        if (active) setLoadingContainers(false);
+      }
+    }
+    void loadContainers();
+    return () => { active = false; };
+  }, [accountId, connected]);
+
+  useEffect(() => {
+    if (!connected || !accountId || !containerId) {
+      setWorkspaces([]);
+      setWorkspaceId("");
+      return;
+    }
+    let active = true;
+    setLoadingWorkspaces(true);
+    async function loadWorkspaces() {
+      try {
+        const params = new URLSearchParams({ accountId, containerId });
+        const response = await studioAuthFetch(`/api/integrations/gtm/workspaces?${params.toString()}`);
+        const body = await response.json().catch(() => ({}));
+        if (!active) return;
+        if (!response.ok) throw new Error(body.error || "Could not list GTM workspaces.");
+        const list = Array.isArray(body.workspaces) ? body.workspaces as GtmWorkspace[] : [];
+        setWorkspaces(list);
+        const preferred = list.find((workspace) => /meridian integration test/i.test(String(workspace.name || ""))) || list[0];
+        setWorkspaceId(preferred?.workspaceId || "");
+        setError("");
+      } catch (loadError) {
+        if (!active) return;
+        setWorkspaces([]);
+        setWorkspaceId("");
+        setError(loadError instanceof Error ? loadError.message : "Could not list GTM workspaces.");
+      } finally {
+        if (active) setLoadingWorkspaces(false);
+      }
+    }
+    void loadWorkspaces();
+    return () => { active = false; };
+  }, [accountId, containerId, connected]);
+
+  async function runPermissionTest(confirm = false) {
+    if (!canRunTest && !confirm) return;
+    setTestPhase("running");
+    setTestMessage(confirm ? "Running reversible permission test…" : "Requesting dry-run plan…");
+    try {
+      const response = await studioAuthFetch("/api/integrations/gtm/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountId,
+          containerId,
+          ...(confirm ? { confirmation: confirmationPhrase } : {}),
+        }),
+      });
+      const body = await response.json().catch(() => ({})) as GtmTestResult;
+      if (!response.ok) {
+        setTestPhase("failed");
+        setTestMessage(body.error || "Permission test failed.");
+        setError(body.error || "Permission test failed.");
+        return;
+      }
+      if (body.dryRun) {
+        setTestPhase("planned");
+        setTestPlan(Array.isArray(body.plan) ? body.plan : []);
+        setTestMessage("Dry-run ready. Confirm to create, edit, and delete temporary GTM resources.");
+        return;
+      }
+      setTestPhase("passed");
+      setTestMessage("Permission test completed. Temporary workspace resources were cleaned up.");
+      setError("");
+    } catch (testError) {
+      setTestPhase("failed");
+      const message = testError instanceof Error ? testError.message : "Permission test failed.";
+      setTestMessage(message);
+      setError(message);
+    }
+  }
+
+  const authorizeHref = `/api/integrations/google/authorize?return_to=${encodeURIComponent(`${STUDIO_PATH}?integration=gtm`)}`;
+  const selectedAccount = accounts.find((account) => account.accountId === accountId);
+  const selectedContainer = containers.find((container) => container.containerId === containerId);
+  const selectedWorkspace = workspaces.find((workspace) => workspace.workspaceId === workspaceId);
+  const loadingResources = loadingAccounts || loadingContainers || loadingWorkspaces;
+
   return <>
-    <div className="integration-detail-nav"><button className="text-button" onClick={onBack}>← All integrations</button><Badge tone="neutral">Draft configuration</Badge></div>
-    <Header eyebrow="Google platform" title="Google Tag Manager" description="Select authorized containers and manage workspace tag drafts while keeping approval and publishing outside Meridian." action={<button className="primary-button page-action" onClick={() => { location.href = `/api/integrations/google/authorize?return_to=${encodeURIComponent(`${STUDIO_PATH}?integration=gtm`)}`; }}>Authorize with Google</button>} />
-    <div className="gtm-boundary"><span className="integration-mark blue">GTM</span><div><strong>Least-privilege draft access</strong><small>Meridian can inspect accounts, containers, workspaces, and tags, then create, edit, or delete tag drafts. It cannot publish a container.</small></div><Badge tone="warn">Not connected</Badge></div>
+    <div className="integration-detail-nav"><button className="text-button" onClick={onBack}>← All integrations</button><Badge tone={connected ? "good" : "neutral"}>{connected ? "Connected" : "Draft configuration"}</Badge></div>
+    <Header
+      eyebrow="Google platform"
+      title="Google Tag Manager"
+      description="Select authorized containers and manage workspace tag drafts while keeping approval and publishing outside Meridian."
+      action={<button className="primary-button page-action" onClick={() => { location.href = authorizeHref; }}>{connected ? "Reauthorize Google" : "Authorize with Google"}</button>}
+    />
+    <div className="gtm-boundary">
+      <span className="integration-mark blue">GTM</span>
+      <div>
+        <strong>Least-privilege draft access</strong>
+        <small>
+          {status === "loading" && "Checking Google connection status…"}
+          {status === "disconnected" && "Authorize Google to list accounts and containers available to your user."}
+          {status === "error" && (error || "Google connection status could not be verified.")}
+          {connected && !loadingAccounts && accounts.length === 0 && "Connected, but no GTM accounts were returned for this Google user."}
+          {connected && accounts.length > 0 && `Connected · ${accounts.length} account${accounts.length === 1 ? "" : "s"} available.`}
+        </small>
+      </div>
+      <Badge tone={connected ? "good" : "warn"}>{connected ? "Connected" : status === "loading" ? "Checking" : "Not connected"}</Badge>
+    </div>
+
+    <section className="dashboard-card gtm-resources">
+      <div className="card-heading">
+        <div>
+          <h2>Authorized resources</h2>
+          <p>Accounts, containers, and workspaces returned by the Google Tag Manager API for the connected user.</p>
+        </div>
+        <Badge tone={connected ? "good" : "neutral"}>{loadingResources ? "Loading" : connected ? "Live" : "Waiting"}</Badge>
+      </div>
+      <div className="gtm-resource-grid">
+        <label>
+          GTM account
+          <select value={accountId} disabled={!connected || loadingAccounts || accounts.length === 0} onChange={(event) => { setAccountId(event.target.value); setTestPhase("idle"); setTestPlan([]); setTestMessage(""); }}>
+            {!connected && <option value="">Authorize Google to load accounts</option>}
+            {connected && loadingAccounts && <option value="">Loading accounts…</option>}
+            {connected && !loadingAccounts && accounts.length === 0 && <option value="">No accounts available</option>}
+            {accounts.map((account) => (
+              <option key={account.accountId || account.name} value={account.accountId || ""}>
+                {account.name || account.accountId}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Container
+          <select value={containerId} disabled={!connected || !accountId || loadingContainers || containers.length === 0} onChange={(event) => { setContainerId(event.target.value); setTestPhase("idle"); setTestPlan([]); setTestMessage(""); }}>
+            {!accountId && <option value="">Select an account first</option>}
+            {accountId && loadingContainers && <option value="">Loading containers…</option>}
+            {accountId && !loadingContainers && containers.length === 0 && <option value="">No containers available</option>}
+            {containers.map((container) => (
+              <option key={container.containerId || container.publicId || container.name} value={container.containerId || ""}>
+                {container.name || container.publicId || container.containerId}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Workspace
+          <select value={workspaceId} disabled={!connected || !containerId || loadingWorkspaces || workspaces.length === 0} onChange={(event) => setWorkspaceId(event.target.value)}>
+            {!containerId && <option value="">Select a container first</option>}
+            {containerId && loadingWorkspaces && <option value="">Loading workspaces…</option>}
+            {containerId && !loadingWorkspaces && workspaces.length === 0 && <option value="">No workspaces available</option>}
+            {workspaces.map((workspace) => (
+              <option key={workspace.workspaceId || workspace.name} value={workspace.workspaceId || ""}>
+                {workspace.name || workspace.workspaceId}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      {error && <p className="gtm-resource-error">{error}</p>}
+      {connected && selectedAccount && selectedContainer && (
+        <p className="gtm-resource-summary">
+          Selected <strong>{selectedAccount.name || selectedAccount.accountId}</strong>
+          {" · "}
+          <strong>{selectedContainer.name || selectedContainer.publicId || selectedContainer.containerId}</strong>
+          {selectedContainer.publicId ? ` (${selectedContainer.publicId})` : ""}
+          {selectedWorkspace ? <>{" · "}<strong>{selectedWorkspace.name || selectedWorkspace.workspaceId}</strong></> : null}
+        </p>
+      )}
+    </section>
 
     <div className="gtm-layout">
       <section className="dashboard-card">
         <div className="card-heading"><div><h2>GTM permissions</h2><p>Native access assigned to the Google user authorizing Meridian</p></div><Badge>Recommended</Badge></div>
         <div className="permission-table">
           <div className="permission-head"><span>Level</span><span>Permission</span><span>Meridian</span><span>Reason</span></div>
-          {permissionRows.map(([level, permission, status, reason]) => <div className="permission-row" key={`${level}-${permission}`}><span>{level}</span><strong>{permission}</strong><Badge tone={status === "Required" ? "good" : "neutral"}>{status}</Badge><small>{reason}</small></div>)}
+          {permissionRows.map(([level, permission, statusLabel, reason]) => <div className="permission-row" key={`${level}-${permission}`}><span>{level}</span><strong>{permission}</strong><Badge tone={statusLabel === "Required" ? "good" : "neutral"}>{statusLabel}</Badge><small>{reason}</small></div>)}
         </div>
       </section>
       <aside className="dashboard-card scope-card">
@@ -334,8 +663,45 @@ function GtmIntegration({ onBack }: { onBack: () => void }) {
     </section>
 
     <section className="dashboard-card connection-test">
-      <div className="card-heading"><div><h2>Measurement Stack permission test</h2><p>Safe validation plan for measurementstack.com; no test change is published to the live site.</p></div><Badge tone="coming">Authorization required</Badge></div>
-      <div className="test-layout"><ol>{testSteps.map(([number, title, detail]) => <li key={number}><span>{number}</span><div><strong>{title}</strong><small>{detail}</small></div></li>)}</ol><aside><label>Target property<input value="measurementstack.com" readOnly /></label><label>Test workspace<input value="Meridian Integration Test" readOnly /></label><div className="secure-field"><span>Test artifact</span><strong>Meridian — Permission Test</strong><small>The tag is created, updated, and deleted inside the isolated workspace. No version is created and nothing is published.</small></div><button className="primary-button" disabled>Run permission test</button><small className="disabled-help">Authorize Google and select the GTM container to enable this test.</small></aside></div>
+      <div className="card-heading">
+        <div>
+          <h2>Measurement Stack permission test</h2>
+          <p>Safe validation plan for measurementstack.com; no test change is published to the live site.</p>
+        </div>
+        <Badge tone={testPhase === "passed" ? "good" : testPhase === "failed" ? "warn" : canRunTest ? "good" : "coming"}>
+          {testPhase === "passed" ? "Passed" : testPhase === "failed" ? "Failed" : testPhase === "planned" ? "Confirm" : canRunTest ? "Ready" : "Authorization required"}
+        </Badge>
+      </div>
+      <div className="test-layout">
+        <ol>
+          {(testPlan.length ? testPlan.map((step, index) => [String(index + 1).padStart(2, "0"), step, "Dry-run step"] as const) : testSteps).map(([number, title, detail]) => (
+            <li key={`${number}-${title}`}><span>{number}</span><div><strong>{title}</strong><small>{detail}</small></div></li>
+          ))}
+        </ol>
+        <aside>
+          <label>Target property<input value="measurementstack.com" readOnly /></label>
+          <label>Selected container<input value={selectedContainer?.name || selectedContainer?.publicId || selectedContainer?.containerId || "Not selected"} readOnly /></label>
+          <label>Test workspace<input value="Meridian Integration Test" readOnly /></label>
+          <div className="secure-field">
+            <span>Test artifact</span>
+            <strong>Meridian — Permission Test</strong>
+            <small>The tag is created, updated, and deleted inside an isolated workspace. No version is created and nothing is published.</small>
+          </div>
+          <button
+            className="primary-button"
+            disabled={testPhase === "running" || (testPhase !== "planned" && !canRunTest)}
+            onClick={() => { void runPermissionTest(testPhase === "planned"); }}
+          >
+            {testPhase === "running" ? "Running…" : testPhase === "planned" ? `Confirm ${confirmationPhrase}` : "Run permission test"}
+          </button>
+          <small className="disabled-help">
+            {testMessage
+              || (canRunTest
+                ? "First request returns a dry-run plan. Confirm to execute the reversible mutation test."
+                : "Authorize Google and select account + container to enable this test.")}
+          </small>
+        </aside>
+      </div>
     </section>
   </>;
 }
