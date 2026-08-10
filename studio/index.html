@@ -6,13 +6,14 @@
     <meta name="description" content="Meridian Consent implementation, monitoring, and governance workspace." />
     <meta name="theme-color" content="#0d0f12" />
     <link rel="icon" href="./favicon.svg" />
-    <link rel="stylesheet" href="/consent/meridian-consent.min.css?v=0.3.0" />
     <title>Meridian Consent Studio</title>
     <script>
+      // Authenticated Studio should not show the public consent banner over the app chrome.
       window.MeridianConsentConfig = {
         policyVersion: "1.0",
         googleConsent: true,
         waitForUpdate: 500,
+        autoShow: false,
       };
     </script>
     <script src="/consent/meridian-consent.min.js?v=0.3.0"></script>
