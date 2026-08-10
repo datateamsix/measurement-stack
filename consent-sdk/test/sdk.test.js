@@ -75,7 +75,7 @@ test('initializes denied-by-default before emitting the ready event', () => {
   assert.equal(defaultCommand[2].security_storage, 'granted');
   for (const type of TYPES.filter((type) => type !== 'security_storage')) assert.equal(defaultCommand[2][type], 'denied');
   assert.equal(ready.meridian_consent.has_choice, false);
-  assert.equal(window.MeridianConsent.version, '0.2.0');
+  assert.equal(window.MeridianConsent.version, '0.3.0');
 });
 
 test('saves a granular choice, updates Google, and emits one stable GTM envelope', () => {

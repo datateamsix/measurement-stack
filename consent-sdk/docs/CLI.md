@@ -10,7 +10,19 @@ Run without arguments in an interactive terminal:
 meridian-consent
 ```
 
-The menu provides the four useful entry points: migrate, scan, consent-impact analytics, and policy profiles. For automation, call commands directly.
+The menu provides the focused Site Scan, migrate, container scan, consent-impact analytics, and policy-profile entry points. For automation, call commands directly.
+
+## Site Scan
+
+```bash
+meridian-consent site-scan https://example.com \
+  --max-pages 10 \
+  --output-dir ./meridian-site-scan
+```
+
+Site Scan is an optional Playwright-powered browser audit. It does not affect the consent runtime or require Chromium for GTM-only workflows. Install Chromium once with `npx playwright install chromium`.
+
+Use `--dry-run` to inspect the selected homepage/navigation/sitemap sample, `--single-page` for a specific URL, and `--full` to add analytics-only and withdrawal states to the default baseline/reject/accept/GPC comparison. See [`SITE-SCAN.md`](SITE-SCAN.md) for the complete evidence and output contract.
 
 ## Recommended migration
 

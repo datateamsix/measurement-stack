@@ -1,6 +1,6 @@
 {
   "name": "@meridian/consent",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A lightweight consent runtime and auditable GTM governance toolkit for Meridian.",
   "type": "module",
   "private": true,
@@ -10,6 +10,7 @@
     "classifier",
     "migration",
     "policy",
+    "scanner",
     "docs",
     "bin",
     "README.md",
@@ -23,6 +24,7 @@
     "./classifier": "./classifier/index.js",
     "./migration": "./migration/index.js",
     "./policy": "./policy/index.js",
+    "./scanner": "./scanner/index.js",
     "./registry": "./classifier/providers.v1.json"
   },
   "scripts": {
@@ -33,5 +35,8 @@
   },
   "devDependencies": {
     "esbuild": "^0.25.0"
+  },
+  "optionalDependencies": {
+    "playwright": "^1.62.1"
   }
 }

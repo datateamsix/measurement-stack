@@ -25,6 +25,15 @@ test('CLI exposes branded contextual help', () => {
   assert.match(result.stdout, /never overwritten/);
 });
 
+test('CLI exposes privacy-safe site scan help', () => {
+  const result = run(['help', 'site-scan']);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /site scan/i);
+  assert.match(result.stdout, /capped at 10 pages/);
+  assert.match(result.stdout, /never saved/);
+  assert.match(result.stdout, /authorized to assess/);
+});
+
 test('CLI withholds transformed output until review is complete', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'meridian-cli-pending-'));
   const result = run(['migrate', fixturePath, '--approve-recommended', '--output-dir', directory]);

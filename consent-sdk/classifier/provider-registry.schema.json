@@ -51,6 +51,8 @@
           "uniqueItems": true,
           "items": { "$ref": "#/$defs/consentType" }
         },
+        "cookies": { "$ref": "#/$defs/stringList" },
+        "storage_keys": { "$ref": "#/$defs/stringList" },
         "enforcement": { "enum": ["additional", "built_in", "essential"] },
         "match": {
           "type": "object",

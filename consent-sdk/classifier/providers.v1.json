@@ -1,7 +1,7 @@
 {
   "$schema": "./provider-registry.schema.json",
   "schema_version": "1.0",
-  "registry_version": "1.0.1",
+  "registry_version": "1.1.0",
   "consent_types": [
     "security_storage",
     "functionality_storage",
@@ -19,9 +19,11 @@
       "purposes": ["analytics", "audience_measurement"],
       "required_consent": ["analytics_storage"],
       "enforcement": "built_in",
+      "cookies": ["_ga", "_ga_*"],
       "match": {
         "tag_types": ["gaawe", "gaawc", "googtag"],
         "name_contains": ["ga4", "google analytics"],
+        "hostnames": ["google-analytics.com", "googletagmanager.com"],
         "code_contains": ["gtag('config'", "gtag(\"config\"", "google-analytics.com/g/collect"]
       }
     },
@@ -32,6 +34,7 @@
       "purposes": ["advertising", "conversion_measurement"],
       "required_consent": ["ad_storage", "ad_user_data"],
       "enforcement": "built_in",
+      "cookies": ["_gcl_au", "_gcl_aw_*", "_gcl_dc_*"],
       "match": {
         "tag_types": ["awct"],
         "name_contains": ["google ads conversion", "adwords conversion"],
@@ -71,6 +74,7 @@
       "purposes": ["advertising", "audience_measurement", "remarketing"],
       "required_consent": ["ad_storage", "ad_user_data", "ad_personalization"],
       "enforcement": "additional",
+      "cookies": ["_fbp", "_fbc"],
       "match": {
         "name_contains": ["meta pixel", "facebook pixel"],
         "hostnames": ["connect.facebook.net", "www.facebook.com/tr"],
@@ -84,6 +88,7 @@
       "purposes": ["advertising", "audience_measurement", "remarketing"],
       "required_consent": ["ad_storage", "ad_user_data", "ad_personalization"],
       "enforcement": "additional",
+      "cookies": ["li_fat_id"],
       "match": {
         "name_contains": ["linkedin insight", "linkedin conversion"],
         "hostnames": ["snap.licdn.com", "px.ads.linkedin.com"],
@@ -175,6 +180,7 @@
       "purposes": ["analytics", "session_replay"],
       "required_consent": ["analytics_storage"],
       "enforcement": "additional",
+      "cookies": ["_hjSessionUser_*", "_hjSession_*", "_hjAbsoluteSessionInProgress", "_hjIncludedInSessionSample_*"],
       "match": {
         "name_contains": ["hotjar"],
         "hostnames": ["static.hotjar.com", "script.hotjar.com"],
@@ -188,6 +194,7 @@
       "purposes": ["analytics", "session_replay"],
       "required_consent": ["analytics_storage"],
       "enforcement": "additional",
+      "cookies": ["_clck", "_clsk", "CLID"],
       "match": {
         "name_contains": ["microsoft clarity", "clarity"],
         "hostnames": ["clarity.ms"],
@@ -227,6 +234,8 @@
       "purposes": ["analytics", "product_analytics"],
       "required_consent": ["analytics_storage"],
       "enforcement": "additional",
+      "cookies": ["AMP_*", "AMP_MKTG_*", "AMP_TEST_*", "AMP_TLDTEST_*", "amplitude_id_*"],
+      "storage_keys": ["AMP_unsent_*", "amplitude_unsent_*", "amplitude_unsent_identify_*"],
       "match": {
         "name_contains": ["amplitude"],
         "hostnames": ["cdn.amplitude.com", "api2.amplitude.com"],
@@ -253,6 +262,8 @@
       "purposes": ["analytics", "data_collection"],
       "required_consent": ["analytics_storage"],
       "enforcement": "additional",
+      "cookies": ["ajs_anonymous_id", "ajs_user_id"],
+      "storage_keys": ["ajs_anonymous_id", "ajs_user_id"],
       "match": {
         "name_contains": ["segment analytics", "segment.io"],
         "hostnames": ["cdn.segment.com", "api.segment.io"],
@@ -266,6 +277,8 @@
       "purposes": ["analytics", "lead_generation"],
       "required_consent": ["analytics_storage", "functionality_storage"],
       "enforcement": "additional",
+      "cookies": ["__hstc", "__hssc", "__hssrc", "hubspotutk"],
+      "storage_keys": ["__hmpl"],
       "match": {
         "name_contains": ["hubspot tracking", "hubspot"],
         "hostnames": ["js.hs-scripts.com", "js.hs-analytics.net"],
@@ -331,6 +344,7 @@
       "purposes": ["personalization", "experimentation", "analytics"],
       "required_consent": ["personalization_storage", "analytics_storage"],
       "enforcement": "additional",
+      "cookies": ["optimizelyEndUserId", "optimizelyOptOut"],
       "match": {
         "name_contains": ["optimizely"],
         "hostnames": ["cdn.optimizely.com"],

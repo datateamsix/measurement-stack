@@ -79,6 +79,11 @@ export function validateRegistry(candidate = registry) {
     if (!provider.id || ids.has(provider.id)) throw new TypeError(`Provider id is missing or duplicated: ${provider.id || '(missing)'}`);
     ids.add(provider.id);
     validateConsentSet(provider.required_consent);
+    for (const field of ['cookies', 'storage_keys']) {
+      if (provider[field] !== undefined && (!Array.isArray(provider[field]) || provider[field].some((value) => typeof value !== 'string' || !value))) {
+        throw new TypeError(`${field} for ${provider.id} must be a list of non-empty strings.`);
+      }
+    }
     if (!['additional', 'built_in', 'essential'].includes(provider.enforcement)) {
       throw new TypeError(`Unsupported enforcement for ${provider.id}: ${provider.enforcement}`);
     }

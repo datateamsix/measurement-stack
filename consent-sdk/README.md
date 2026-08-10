@@ -31,6 +31,7 @@ The banner above is rendered by the SDK on the included Measurement Stack sandbo
 - maps real tag triggers into a Consent Impact measurement-opportunity manifest;
 - honors Global Privacy Control and records policy state separately from Google consent;
 - creates local consent receipts and runs explicit withdrawal actions without a network dependency.
+- samples representative site pages under isolated consent states and inventories cookies, browser storage, and redacted network structure.
 
 Optional **Consent Impact Analytics** adds privacy-preserving aggregate counters and CLI reporting without enlarging or networking the core runtime. See [`analytics/README.md`](analytics/README.md).
 
@@ -57,6 +58,10 @@ The browser runtime stays tiny. Provider detection and GTM modification run offl
 ```bash
 meridian-consent
 
+meridian-consent site-scan https://example.com \
+  --max-pages 10 \
+  --output-dir ./meridian-site-scan
+
 meridian-consent migrate GTM-XXXX_workspace.json \
   --profile strict-global \
   --output-dir ./meridian-output
@@ -75,6 +80,25 @@ meridian-consent analytics \
 ```
 
 Running `meridian-consent` in a terminal opens the branded start menu. `migrate` is the recommended path; the lower-level commands remain available for pipelines and diagnosis. See [`docs/CLI.md`](docs/CLI.md) for every output and review mode.
+
+## Site Scan
+
+Meridian Site Scan closes the gap between what a GTM container is configured to deploy and what the browser actually does. It prioritizes the homepage and main-navigation pages, uses the sitemap only as a fallback, honors `robots.txt`, and caps the representative sample at 10 pages.
+
+The default scan compares behavior before choice, after rejection, after acceptance, and with GPC enabled. A full audit adds analytics-only and withdrawal states. Each state runs in a fresh non-persistent Chromium context.
+
+The evidence package inventories:
+
+- cookie names and security/lifetime attributes;
+- local- and session-storage key names;
+- IndexedDB database/object-store and Cache Storage names;
+- third-party frames and service workers;
+- request destinations, resource types, and transmitted field names;
+- observable Meridian and Google consent state.
+
+Cookie values, storage values, and observed request query/body values are never retained. Site Scan is an optional Playwright-powered CLI module and does not enlarge the browser consent bundle or the non-scan CLI path. Selected scope URLs are retained, so signed or tokenized URLs should not be supplied.
+
+See [`docs/SITE-SCAN.md`](docs/SITE-SCAN.md) for page-selection rules, custom CMP selectors, privacy boundaries, scan profiles, and output contracts.
 
 The migrator merges only the useful starter variables and triggers. It does not add the paused demonstration tags. Direct-SDK installations remain direct-SDK installations; GTM-native installations must import [`gtm/meridian-consent-template.tpl`](gtm/meridian-consent-template.tpl) separately because GTM custom-template permissions require an explicit human import and review.
 
@@ -108,7 +132,7 @@ The patch uses GTM's documented [`consentSettings` resource shape](https://devel
 - purpose labels;
 - a Google consent requirement set;
 - `built_in`, `additional`, or `essential` enforcement;
-- deterministic matching signals for GTM tag types, hostnames, code signatures, and names.
+- deterministic matching signals for GTM tag types, hostnames, code signatures, names, and documented cookie/storage-key patterns.
 
 Strong technical evidence is weighted above naming conventions. A known native tag type scores 100, hostname 90, code signature 85, and name 35. Corroborating signals add limited confidence; conflicts and weak name-only matches remain reviewable. A custom registry can be supplied with `scan --registry providers.json`, which is the future extension point for organization-specific and UI-created providers.
 
@@ -174,7 +198,7 @@ Both use the same versioned envelope:
   event: 'meridian_consent_updated',
   meridian_consent: {
     schema_version: '1.0',
-    sdk_version: '0.2.0',
+    sdk_version: '0.3.0',
     policy_version: '1.0',
     consent_id: 'c59e7b09-...',
     revision_id: 'ad722e36-...',
@@ -316,7 +340,7 @@ The compressed JavaScript and CSS have a combined 12 KB gzip budget. The budget 
 
 - Treat `schema_version` as a public data contract; only change it for breaking payload changes.
 - Increment `policyVersion` when the disclosure or purposes materially change and renewed consent is required.
-- Keep SDK versions immutable on the CDN (`/consent/0.2.0/...`) and use a separately controlled alias only if rollback is immediate.
+- Keep SDK versions immutable on the CDN (`/consent/0.3.0/...`) and use a separately controlled alias only if rollback is immediate.
 - Test accept, reject, granular save, stored restore, withdrawal, keyboard navigation, and every vendor request in GTM Preview before publishing.
 - Review GTM Consent Overview so each non-Google tag declares its additional consent checks.
 

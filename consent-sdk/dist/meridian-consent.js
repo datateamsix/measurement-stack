@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '0.2.0';
+  const VERSION = '0.3.0';
   const SCHEMA_VERSION = '1.0';
   const CONSENT_TYPES = Object.freeze([
     'security_storage',

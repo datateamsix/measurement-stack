@@ -22,7 +22,7 @@ import {
 import { createDisclosureInventory, migrationPackage } from '../migration/index.js';
 import { POLICY_PROFILES, policyManifest } from '../policy/index.js';
 
-const VERSION = '0.2.0';
+const VERSION = '0.3.0';
 const color = Boolean(output.isTTY && !process.env.NO_COLOR);
 const tone = (code, value) => color ? `\u001b[${code}m${value}\u001b[0m` : value;
 
@@ -32,7 +32,8 @@ function brand(compact = false) {
 }
 
 const HELP = Object.freeze({
-  main: `${brand()}\n\nConsent implementation, GTM migration, and measurement-impact analysis.\n\nUsage:\n  meridian-consent                         Open the start menu\n  meridian-consent migrate <container>     Build a reviewable consent-ready package\n  meridian-consent scan <container>        Classify tags without changing anything\n  meridian-consent analytics [options]     Query consent-impact aggregates\n  meridian-consent policy [profile]        List or inspect policy profiles\n  meridian-consent help [command]           Show contextual help\n\nRun "meridian-consent help migrate" for the recommended workflow.`,
+  main: `${brand()}\n\nConsent implementation, site evidence, GTM migration, and impact analysis.\n\nUsage:\n  meridian-consent                         Open the start menu\n  meridian-consent site-scan <url>         Sample browser storage and network behavior\n  meridian-consent migrate <container>     Build a reviewable consent-ready package\n  meridian-consent scan <container>        Classify tags without changing anything\n  meridian-consent analytics [options]     Query consent-impact aggregates\n  meridian-consent policy [profile]        List or inspect policy profiles\n  meridian-consent help [command]          Show contextual help\n\nRun "meridian-consent help site-scan" for the browser-audit workflow.`,
+  'site-scan': `${brand(true)} — site scan\n\nUsage:\n  meridian-consent site-scan https://example.com [--max-pages 10]\n    [--include /checkout] [--profiles baseline,reject,accept,gpc]\n    [--full] [--single-page] [--headed] [--dry-run]\n    [--accept-selector <css>] [--reject-selector <css>]\n    [--output-dir ./meridian-site-scan]\n\nPage selection prioritizes the homepage, explicit URLs, and main navigation, using\nthe sitemap only as a fallback. The sample is capped at 10 pages and honors robots.txt.\nCookie/storage values and observed request query/body values are never saved.\nOnly scan websites you own or are authorized to assess.\n\nInstall the browser once with: npx playwright install chromium`,
   migrate: `${brand(true)} — GTM migration\n\nUsage:\n  meridian-consent migrate GTM-XXXX.json [--output-dir ./meridian-output]\n    [--profile strict-global|eu-uk-consent|us-opt-out]\n    [--registry providers.json] [--plan reviewed-plan.json]\n    [--review] [--approve-recommended]\n\nOutputs scan, review, impact, disclosure, diff, validation, policy, and a transformed\ncontainer when every tag has an explicit decision and validation passes. The source\nfile is never overwritten and nothing is published to GTM.`,
   scan: `${brand(true)} — container scan\n\nUsage:\n  meridian-consent scan GTM-XXXX.json [--output scan.json] [--registry providers.json]`,
   review: `${brand(true)} — human review\n\nUsage:\n  meridian-consent review approvals.json [--output approvals.reviewed.json]\n\nApprove, skip, or explicitly edit every tag's consent requirement.`,
@@ -48,7 +49,8 @@ export function argsOf(argv) {
   const [command, ...rest] = argv;
   const options = {};
   const positionals = [];
-  const booleanOptions = new Set(['review', 'approve-recommended', 'help']);
+  const booleanOptions = new Set(['review', 'approve-recommended', 'help', 'full', 'single-page', 'headed', 'dry-run', 'exact-pages']);
+  const listOptions = new Set(['include', 'url']);
   for (let index = 0; index < rest.length; index += 1) {
     const key = rest[index];
     if (!key.startsWith('--')) {
@@ -62,7 +64,8 @@ export function argsOf(argv) {
     }
     const value = rest[index + 1];
     if (!value || value.startsWith('--')) throw new Error(`Missing value for ${key}`);
-    options[name] = value;
+    if (listOptions.has(name)) options[name] = [...(options[name] || []), value];
+    else options[name] = value;
     index += 1;
   }
   return { command, positionals, file: positionals[0], options };
@@ -172,35 +175,80 @@ async function migrate(file, options) {
   if (result.status === 'validation_failed') process.exitCode = 2;
 }
 
+async function siteScan(file, options) {
+  const suppliedUrls = options.url || [];
+  const startUrl = file || suppliedUrls[0];
+  if (!startUrl) throw new Error('site-scan requires a starting URL.');
+  const { runSiteScan, writeSiteScanOutputs } = await import('../scanner/index.js');
+  const included = [...(options.include || []), ...suppliedUrls.filter((url) => url !== startUrl)];
+  const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z').replace('T', '-');
+  const host = new URL(startUrl).hostname.replace(/[^a-z0-9.-]/gi, '-');
+  const outputDirectory = resolve(options['output-dir'] || `meridian-site-scan-${host}-${timestamp}`);
+  const result = await runSiteScan(startUrl, {
+    include: included,
+    maxPages: options['max-pages'] || 10,
+    profiles: options.profiles,
+    full: options.full,
+    singlePage: options['single-page'],
+    exactPages: options['exact-pages'],
+    headed: options.headed,
+    dryRun: options['dry-run'],
+    acceptSelector: options['accept-selector'],
+    rejectSelector: options['reject-selector'],
+    timeoutMs: options['timeout-ms'],
+    waitMs: options['wait-ms'],
+    onPlan(plan) {
+      console.log(`\n${brand(true)}  ${tone('1', 'SCAN PLAN')}`);
+      for (const page of plan.pages) console.log(`  ${page.position}. ${page.url} ${tone('2', `[${page.source}]`)}`);
+      const profileCount = options.profiles ? String(options.profiles).split(',').filter(Boolean).length : options.full ? 6 : 4;
+      console.log(`\nPages: ${plan.pages.length}/10  Planned browser visits: ${plan.pages.length * profileCount}`);
+    },
+  });
+  const written = await writeSiteScanOutputs(outputDirectory, result);
+  if (result.status === 'planned') {
+    console.log(`${tone('32', '✓')} Scan plan: ${written.directory}`);
+    return;
+  }
+  console.log(`\n${brand(true)}  ${tone('32', 'SITE SCAN COMPLETE')}`);
+  console.log(`Technologies: ${result.evidence.summary.technologies}  Cookies: ${result.evidence.summary.cookies}  Storage items: ${result.evidence.summary.storage_items}`);
+  console.log(`Potential issues: ${result.evidence.summary.potential_issues}  Manual review: ${result.evidence.summary.manual_review}  Unable to test: ${result.evidence.summary.unable_to_test}`);
+  console.log(`${tone('32', '✓')} Evidence package: ${written.directory}`);
+}
+
 async function startMenu() {
   console.log(`${brand()}\n\n${tone('2', 'A lightweight measurement consent toolkit.')}\n`);
-  console.log('  1  Migrate a GTM container');
-  console.log('  2  Scan and classify a container');
-  console.log('  3  Query consent impact analytics');
-  console.log('  4  View policy profiles');
-  console.log('  5  Help');
+  console.log('  1  Scan a website');
+  console.log('  2  Migrate a GTM container');
+  console.log('  3  Scan and classify a container');
+  console.log('  4  Query consent impact analytics');
+  console.log('  5  View policy profiles');
+  console.log('  6  Help');
   console.log('  q  Quit\n');
   const rl = createInterface({ input, output });
   let choice;
   let file;
   try {
     choice = (await rl.question('Choose an action: ')).trim().toLowerCase();
-    if (!['1', '2', '3', '4', '5', 'q'].includes(choice)) throw new Error('Choose 1–5 or q.');
-    file = ['1', '2'].includes(choice) ? (await rl.question('Path to GTM container JSON: ')).trim() : null;
+    if (!['1', '2', '3', '4', '5', '6', 'q'].includes(choice)) throw new Error('Choose 1–6 or q.');
+    file = choice === '1'
+      ? (await rl.question('Website homepage or page URL: ')).trim()
+      : ['2', '3'].includes(choice) ? (await rl.question('Path to GTM container JSON: ')).trim() : null;
   } finally {
     rl.close();
   }
   if (choice === 'q') return;
-  if (choice === '4') return console.table(Object.values(POLICY_PROFILES).map(({ id, label, interaction }) => ({ Profile: id, Name: label, Mode: interaction })));
-  if (choice === '5') return usage();
-  if (choice === '1') return migrate(file, { review: true });
-  if (choice === '2') return runCommand({ command: 'scan', file, options: {}, positionals: [file] });
+  if (choice === '5') return console.table(Object.values(POLICY_PROFILES).map(({ id, label, interaction }) => ({ Profile: id, Name: label, Mode: interaction })));
+  if (choice === '6') return usage();
+  if (choice === '1') return siteScan(file, {});
+  if (choice === '2') return migrate(file, { review: true });
+  if (choice === '3') return runCommand({ command: 'scan', file, options: {}, positionals: [file] });
   return usage('analytics');
 }
 
 async function runCommand({ command, file, options, positionals }) {
   if (!command) return input.isTTY ? startMenu() : usage();
   if (command === 'help' || command === '--help' || options.help) return usage(positionals?.[0] || (command === 'help' ? 'main' : command));
+  if (command === 'site-scan') return siteScan(file, options);
   if (command === 'migrate') return migrate(file, options);
   if (command === 'policy') {
     if (!file) return console.table(Object.values(POLICY_PROFILES).map(({ id, label, interaction, honor_gpc }) => ({ Profile: id, Name: label, Mode: interaction, GPC: honor_gpc ? 'honored' : 'off' })));

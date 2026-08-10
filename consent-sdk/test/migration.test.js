@@ -65,11 +65,11 @@ test('migration package blocks pending decisions and validates a reviewed transf
   assert.equal(meta.consentSettings.consentStatus, 'NEEDED');
 });
 
-test('disclosure inventory leaves unknown retention and cookies blank', () => {
+test('disclosure inventory uses documented cookies and leaves unknown retention blank', () => {
   const inventory = createDisclosureInventory(scanContainer(fixture), DEFAULT_REGISTRY);
   const meta = inventory.find(({ tag_id }) => tag_id === '2');
   assert.match(meta.destination_domains, /facebook/);
-  assert.equal(meta.known_cookies, '');
+  assert.equal(meta.known_cookies, '_fbp|_fbc');
   assert.equal(meta.retention, '');
   assert.equal(meta.disclosure_status, 'review');
 });
