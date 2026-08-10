@@ -9,9 +9,24 @@ declare global {
   interface Window {
     MeasurementStack?: {
       ready: Promise<{ clerkPublishableKey?: string }>;
+      runtimeConfig?: () => Promise<{ clerkPublishableKey?: string }>;
       loadClerk: () => Promise<{ configured: boolean; clerk: { isSignedIn?: boolean } | null; error?: string }>;
       authFetch?: (url: string, options?: RequestInit) => Promise<Response>;
     };
+  }
+}
+
+async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 
@@ -127,18 +142,29 @@ export default function Home() {
       try {
         const runtime = window.MeasurementStack;
         if (!runtime) {
+          // core.js is deferred; give it a brief chance to register before rendering.
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        const stack = window.MeasurementStack;
+        if (!stack) {
           if (active) setAuthState("ready");
           return;
         }
-        const config = await runtime.ready;
-        const auth = await runtime.loadClerk();
+        // Avoid awaiting stack.ready — it also runs identity sync and can hang the Studio shell.
+        const config = await withTimeout(
+          stack.runtimeConfig ? stack.runtimeConfig() : stack.ready,
+          8000,
+          "Studio runtime config",
+        );
+        const auth = await withTimeout(stack.loadClerk(), 12000, "Clerk initialization");
         if (config.clerkPublishableKey && !auth.clerk?.isSignedIn) {
           const returnTo = `${location.pathname}${location.search}${location.hash}`;
           location.replace(`/sign-in.html?redirect_url=${encodeURIComponent(returnTo)}`);
           return;
         }
         if (active) setAuthState(auth.configured && !auth.clerk ? "error" : "ready");
-      } catch {
+      } catch (error) {
+        console.error("Meridian Studio authentication bootstrap failed", error);
         if (active) setAuthState("error");
       }
     }
