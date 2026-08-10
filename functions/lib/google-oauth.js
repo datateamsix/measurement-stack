@@ -1,6 +1,8 @@
 import { HttpError } from './http.js';
 
 export const GTM_EDIT_SCOPE = 'https://www.googleapis.com/auth/tagmanager.edit.containers';
+export const GTM_VERSION_SCOPE = 'https://www.googleapis.com/auth/tagmanager.edit.containerversions';
+export const GTM_REQUIRED_SCOPES = Object.freeze([GTM_EDIT_SCOPE, GTM_VERSION_SCOPE]);
 const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const REVOKE_URL = 'https://oauth2.googleapis.com/revoke';
@@ -89,7 +91,7 @@ export function googleAuthorizationUrl(env, { state, codeChallenge, loginHint = 
   url.searchParams.set('client_id', config.clientId);
   url.searchParams.set('redirect_uri', config.redirectUri);
   url.searchParams.set('response_type', 'code');
-  url.searchParams.set('scope', GTM_EDIT_SCOPE);
+  url.searchParams.set('scope', GTM_REQUIRED_SCOPES.join(' '));
   url.searchParams.set('access_type', 'offline');
   url.searchParams.set('include_granted_scopes', 'true');
   url.searchParams.set('prompt', 'consent');
@@ -130,12 +132,12 @@ export async function exchangeAuthorizationCode(env, { code, codeVerifier }, fet
     access_token: token.access_token,
     refresh_token: token.refresh_token || '',
     expires_at: Date.now() + Number(token.expires_in || 3600) * 1000,
-    scope: token.scope || GTM_EDIT_SCOPE,
+    scope: token.scope || GTM_REQUIRED_SCOPES.join(' '),
     token_type: token.token_type || 'Bearer',
   };
 }
 
-export async function refreshAccessToken(env, refreshToken, fetcher = fetch) {
+export async function refreshAccessToken(env, refreshToken, currentScope = '', fetcher = fetch) {
   const config = requireOAuthConfig(env);
   const response = await fetcher(TOKEN_URL, {
     method: 'POST',
@@ -153,7 +155,7 @@ export async function refreshAccessToken(env, refreshToken, fetcher = fetch) {
     access_token: token.access_token,
     refresh_token: token.refresh_token || refreshToken,
     expires_at: Date.now() + Number(token.expires_in || 3600) * 1000,
-    scope: token.scope || GTM_EDIT_SCOPE,
+    scope: token.scope || currentScope || GTM_REQUIRED_SCOPES.join(' '),
     token_type: token.token_type || 'Bearer',
   };
 }

@@ -1,4 +1,4 @@
-import { GTM_EDIT_SCOPE } from '../../../lib/google-oauth.js';
+import { GTM_REQUIRED_SCOPES } from '../../../lib/google-oauth.js';
 import { connectionRecord } from '../../../lib/integration-store.js';
 import { appendSetCookie, integrationActor } from '../../../lib/integration-session.js';
 import { errorResponse, json } from '../../../lib/http.js';
@@ -7,6 +7,8 @@ export async function onRequestGet(context) {
   try {
     const actor = await integrationActor(context.request, context.env, { allowCreate: true });
     const record = await connectionRecord(context.env, actor.actorKey);
+    const grantedScopes = new Set(String(record?.granted_scope || '').split(/\s+/u).filter(Boolean));
+    const missingScopes = GTM_REQUIRED_SCOPES.filter((scope) => !grantedScopes.has(scope));
     return appendSetCookie(json({
       configured: Boolean(
         context.env.GOOGLE_CLIENT_ID
@@ -17,8 +19,11 @@ export async function onRequestGet(context) {
       ),
       connected: record?.status === 'connected',
       status: record?.status || 'disconnected',
-      scope: GTM_EDIT_SCOPE,
+      scope: GTM_REQUIRED_SCOPES.join(' '),
+      requiredScopes: GTM_REQUIRED_SCOPES,
       grantedScope: record?.granted_scope || '',
+      reauthorizationRequired: record?.status === 'connected' && missingScopes.length > 0,
+      missingScopes,
       connectedAt: record?.created_at || null,
       updatedAt: record?.updated_at || null,
       lastTestedAt: record?.last_tested_at || null,
@@ -30,7 +35,7 @@ export async function onRequestGet(context) {
         listWorkspaces: true,
         editWorkspaceEntities: true,
         publish: false,
-        createVersion: false,
+        createVersion: missingScopes.length === 0,
         deleteContainer: false,
         manageUsers: false,
       },

@@ -1,4 +1,8 @@
-import { exchangeAuthorizationCode, revokeGoogleToken } from '../../../lib/google-oauth.js';
+import {
+  exchangeAuthorizationCode,
+  GTM_REQUIRED_SCOPES,
+  revokeGoogleToken,
+} from '../../../lib/google-oauth.js';
 import { consumeOAuthState, saveConnection } from '../../../lib/integration-store.js';
 import { integrationActor } from '../../../lib/integration-session.js';
 import { HttpError, errorResponse } from '../../../lib/http.js';
@@ -55,13 +59,13 @@ export async function onRequestGet(context) {
       codeVerifier: pending.codeVerifier,
     });
     const scopes = new Set(String(token.scope || '').split(/\s+/u).filter(Boolean));
-    if (!scopes.has('https://www.googleapis.com/auth/tagmanager.edit.containers')) {
+    const missing = GTM_REQUIRED_SCOPES.filter((scope) => !scopes.has(scope));
+    if (missing.length) {
       await revokeGoogleToken(token.refresh_token || token.access_token).catch(() => false);
-      throw new HttpError(403, 'Google did not grant the required GTM container-edit scope.');
+      throw new HttpError(403, 'Google did not grant the required GTM container and version-edit scopes.');
     }
     const prohibited = [
       'https://www.googleapis.com/auth/tagmanager.delete.containers',
-      'https://www.googleapis.com/auth/tagmanager.edit.containerversions',
       'https://www.googleapis.com/auth/tagmanager.publish',
       'https://www.googleapis.com/auth/tagmanager.manage.users',
       'https://www.googleapis.com/auth/tagmanager.manage.accounts',

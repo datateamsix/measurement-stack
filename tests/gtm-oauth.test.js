@@ -6,9 +6,12 @@ import {
   encryptSecret,
   googleAuthorizationUrl,
   GTM_EDIT_SCOPE,
+  GTM_REQUIRED_SCOPES,
+  GTM_VERSION_SCOPE,
   pkceChallenge,
+  refreshAccessToken,
 } from '../functions/lib/google-oauth.js';
-import { gtmPaths, runGtmMutationTest } from '../functions/lib/gtm-api.js';
+import { createUnpublishedVersion, gtmPaths, runGtmMutationTest } from '../functions/lib/gtm-api.js';
 import { integrationActor } from '../functions/lib/integration-session.js';
 import { saveConnection } from '../functions/lib/integration-store.js';
 import { onRequestGet as authorize } from '../functions/api/integrations/google/authorize.js';
@@ -99,18 +102,29 @@ test('OAuth secrets use authenticated encryption and round-trip without plaintex
   assert.deepEqual(await decryptSecret(envBase, encrypted), { refresh_token: 'refresh-secret' });
 });
 
-test('Google authorization URL requests only the GTM edit scope with PKCE', async () => {
+test('Google authorization URL requests container and version edit scopes with PKCE', async () => {
   const verifier = 'a'.repeat(64);
   const url = googleAuthorizationUrl(envBase, {
     state: 'state-value',
     codeChallenge: await pkceChallenge(verifier),
   });
   assert.equal(url.origin, 'https://accounts.google.com');
-  assert.equal(url.searchParams.get('scope'), GTM_EDIT_SCOPE);
+  assert.equal(url.searchParams.get('scope'), GTM_REQUIRED_SCOPES.join(' '));
+  assert.doesNotMatch(url.searchParams.get('scope'), /tagmanager\.publish/u);
   assert.equal(url.searchParams.get('code_challenge_method'), 'S256');
   assert.equal(url.searchParams.get('access_type'), 'offline');
   assert.equal(url.searchParams.get('state'), 'state-value');
   assert.equal(url.searchParams.get('redirect_uri'), envBase.GOOGLE_OAUTH_REDIRECT_URI);
+});
+
+test('token refresh preserves the previously granted scope when Google omits scope', async () => {
+  const refreshed = await refreshAccessToken(envBase, 'refresh-secret', GTM_EDIT_SCOPE, async () => Response.json({
+    access_token: 'new-access-token',
+    expires_in: 3600,
+    token_type: 'Bearer',
+  }));
+  assert.equal(refreshed.scope, GTM_EDIT_SCOPE);
+  assert.equal(refreshed.refresh_token, 'refresh-secret');
 });
 
 test('local integration sessions are signed and stable across requests', async () => {
@@ -146,7 +160,7 @@ test('OAuth authorize, callback, encrypted persistence, and account listing work
   const state = cookie(authorizeResponse.headers, 'meridian_google_oauth_state');
   assert.ok(session);
   assert.ok(state);
-  assert.equal(location.searchParams.get('scope'), GTM_EDIT_SCOPE);
+  assert.equal(location.searchParams.get('scope'), GTM_REQUIRED_SCOPES.join(' '));
   assert.match(database.state.verifier_ciphertext, /^v1\./u);
 
   const originalFetch = globalThis.fetch;
@@ -156,7 +170,7 @@ test('OAuth authorize, callback, encrypted persistence, and account listing work
         access_token: 'access-secret',
         refresh_token: 'refresh-secret',
         expires_in: 3600,
-        scope: GTM_EDIT_SCOPE,
+        scope: GTM_REQUIRED_SCOPES.join(' '),
         token_type: 'Bearer',
       });
     }
@@ -223,7 +237,7 @@ test('GTM mutation test creates, updates, and removes only temporary resources',
       access_token: 'access-secret',
       refresh_token: 'refresh-secret',
       expires_at: Date.now() + 3_600_000,
-      scope: GTM_EDIT_SCOPE,
+      scope: GTM_REQUIRED_SCOPES.join(' '),
       token_type: 'Bearer',
     },
   });
@@ -263,7 +277,6 @@ test('GTM mutation test creates, updates, and removes only temporary resources',
   assert.match(calls[1].body, /"paused":true/u);
   assert.doesNotMatch(calls[1].body, /firingTriggerId/u);
   assert.deepEqual(result.blockedByApplication, [
-    'container version creation',
     'approval',
     'publishing',
     'container deletion',
@@ -271,10 +284,42 @@ test('GTM mutation test creates, updates, and removes only temporary resources',
   ]);
 });
 
-test('D1 migration and backend source preserve least privilege', async () => {
+test('unpublished version creation requires the version scope and never calls publish', async () => {
+  const database = new FakeD1();
+  const env = { ...envBase, DB: database };
+  const actorKey = 'actor-version-key';
+  await saveConnection(env, {
+    actorKey,
+    token: {
+      access_token: 'access-secret',
+      refresh_token: 'refresh-secret',
+      expires_at: Date.now() + 3_600_000,
+      scope: GTM_REQUIRED_SCOPES.join(' '),
+      token_type: 'Bearer',
+    },
+  });
+  const calls = [];
+  const result = await createUnpublishedVersion(env, actorKey, {
+    accountId: '123', containerId: '456', workspaceId: '7',
+  }, { name: 'Validated consent version' }, async (url, options = {}) => {
+    calls.push({ url: String(url), method: options.method, body: options.body });
+    return Response.json({ compilerError: false, containerVersion: { containerVersionId: '12', name: 'Validated consent version' } });
+  });
+  assert.equal(result.containerVersion.containerVersionId, '12');
+  assert.match(calls[0].url, /workspaces\/7:create_version$/u);
+  assert.doesNotMatch(calls[0].url, /publish/u);
+  assert.equal(calls[0].method, 'POST');
+  assert.ok(database.connection.granted_scope.includes(GTM_VERSION_SCOPE));
+});
+
+test('D1 migrations and backend source preserve an unpublished release boundary', async () => {
   const migration = await readFile(new URL('../migrations/0004_gtm_oauth.sql', import.meta.url), 'utf8');
+  const workflowMigration = await readFile(new URL('../migrations/0005_gtm_property_bindings.sql', import.meta.url), 'utf8');
   const api = await readFile(new URL('../functions/lib/gtm-api.js', import.meta.url), 'utf8');
   assert.match(migration, /CREATE TABLE IF NOT EXISTS meridian_oauth_states/u);
   assert.match(migration, /CREATE TABLE IF NOT EXISTS meridian_integrations/u);
-  assert.doesNotMatch(api, /create_version|:publish|containerversions/u);
+  assert.match(workflowMigration, /meridian_gtm_property_bindings/u);
+  assert.match(workflowMigration, /meridian_gtm_version_exports/u);
+  assert.match(api, /:create_version/u);
+  assert.doesNotMatch(api, /:publish/u);
 });

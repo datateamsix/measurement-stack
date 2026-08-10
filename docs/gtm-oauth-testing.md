@@ -1,14 +1,16 @@
 # Meridian Google Tag Manager OAuth testing
 
-Meridian requests one Google OAuth scope:
+Meridian requests two Google OAuth scopes:
 
 ```text
 https://www.googleapis.com/auth/tagmanager.edit.containers
+https://www.googleapis.com/auth/tagmanager.edit.containerversions
 ```
 
-There are no routes for publishing, approving, creating container versions,
-deleting containers, or managing users. Google Tag Manager must grant the test
-user Account `User` and Container `Edit` access.
+Meridian can create a validated container version from a selected workspace.
+There are no routes for publishing, deleting containers, or managing users.
+Google Tag Manager must grant the user Account `User` and Container `Edit` plus
+`Approve` access; `Publish` is not required.
 
 ## Local setup
 
@@ -75,9 +77,26 @@ To execute, add:
 ```
 
 The test creates a temporary workspace, creates a paused no-trigger test tag,
-renames it, deletes it, and deletes the workspace. It never creates a version or
-publishes. If cleanup cannot finish, the response identifies the remaining GTM
+renames it, deletes it, and deletes the workspace. The permission test itself
+does not create a version or publish. If cleanup cannot finish, the response identifies the remaining GTM
 resource paths under `evidence` and returns `cleanupRequired: true`.
+
+## Tagging and unpublished version workflow
+
+After binding a property to an account, container, and workspace, Studio uses:
+
+```text
+PUT  /api/integrations/gtm/property
+GET  /api/integrations/gtm/assessment?propertyKey=PROPERTY_KEY
+POST /api/integrations/gtm/decisions
+POST /api/integrations/gtm/apply
+POST /api/integrations/gtm/export
+```
+
+The export endpoint synchronizes the workspace, blocks on merge conflicts,
+compiler errors, stale decisions, or any noncompliant tag, and then creates a
+container version. It returns version metadata and a portable workspace package.
+It does not publish the version.
 
 ## Production secrets
 
@@ -100,4 +119,5 @@ For a hosted test, store these as Cloudflare secrets rather than `vars`:
 - `OAUTH_TOKEN_ENCRYPTION_KEY`
 
 Set `MERIDIAN_GTM_TEST_MODE=false` when Clerk authentication is configured. Apply
-the D1 migration remotely before enabling the integration.
+both `0004_gtm_oauth.sql` and `0005_gtm_property_bindings.sql` remotely before
+enabling the integration.

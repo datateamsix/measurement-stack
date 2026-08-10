@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import GtmTagging from "./GtmTagging";
 
 const STUDIO_PATH = "/meridian/consent-studio/";
 const STUDIO_ASSET_PATH = `${STUDIO_PATH}`;
@@ -83,22 +84,12 @@ const complianceControls: { area: string; control: string; status: ControlStatus
   { area: "Performance", control: "CMP performance budget", status: "Partial", evidence: "Core SDK is 6.4 KB gzip; no field-performance gate yet", next: "Add bundle, LCP and interaction regression thresholds" },
 ];
 
-const consentSignals = ["ad_storage", "analytics_storage", "ad_user_data", "ad_personalization", "functionality_storage", "personalization_storage", "security_storage"];
-
 const technologies = [
   { name: "_ga", kind: "Cookie", provider: "Google Analytics", category: "Analytics", state: "After analytics consent", page: "/", status: "Declared" },
   { name: "_fbp", kind: "Cookie", provider: "Meta", category: "Advertising", state: "Accept all", page: "/pricing", status: "Declared" },
   { name: "_hjSessionUser_*", kind: "Local storage", provider: "Hotjar", category: "Analytics", state: "After analytics consent", page: "/product", status: "Declared" },
   { name: "hubspotutk", kind: "Cookie", provider: "HubSpot", category: "Functionality", state: "Accept all", page: "/contact", status: "Review" },
   { name: "visitor_context", kind: "Session storage", provider: "Unknown", category: "Unassigned", state: "Before interaction", page: "/", status: "Review" },
-];
-
-const tags = [
-  { name: "GA4 – Configuration", provider: "Google Analytics", purpose: "Analytics", signals: ["analytics_storage"], confidence: "99%", status: "Verified" },
-  { name: "Meta – Page View", provider: "Meta", purpose: "Advertising", signals: ["ad_storage", "ad_user_data", "ad_personalization"], confidence: "98%", status: "Review" },
-  { name: "Hotjar – UX Analytics", provider: "Hotjar", purpose: "Analytics", signals: ["analytics_storage"], confidence: "96%", status: "Verified" },
-  { name: "HubSpot – Forms", provider: "HubSpot", purpose: "Functionality", signals: ["functionality_storage"], confidence: "91%", status: "Review" },
-  { name: "Security controls", provider: "First party", purpose: "Security", signals: ["security_storage"], confidence: "100%", status: "Verified" },
 ];
 
 const histories = [
@@ -305,12 +296,7 @@ export default function Home() {
             <section className="dashboard-card"><div className="card-heading"><div><h2>Rescan schedule</h2><p>Refresh the active inventory automatically</p></div></div><div className="schedule-box"><label>Frequency<select value={schedule} onChange={(e) => setSchedule(e.target.value)}><option>Manual only</option><option>Daily</option><option>Weekly</option><option>Monthly</option></select></label><label>Scan profile<select><option>Core consent states</option><option>Full audit</option></select></label><div className="next-run"><span>Next scheduled scan</span><strong>{schedule === "Weekly" ? "Aug 17, 2026 · 8:00 AM" : schedule}</strong></div></div></section>
           </div>
         </>}
-        {view === "tagging" && <>
-          <Header eyebrow="Configuration governance" title="Tagging" description="Classify GTM tags, reconcile browser evidence, and review inferred Google consent requirements." action={<button className="secondary-button page-action">Upload GTM export</button>} />
-          <div className="notice-strip"><span>◇</span><div><strong>Consent inference is advisory.</strong><small>Every recommendation shows its evidence and remains subject to explicit approval before export.</small></div><Badge tone="good">18 tags inspected</Badge></div>
-          <section className="dashboard-card"><div className="card-heading"><div><h2>Tag classification</h2><p>Provider, purpose, and inferred Consent Mode categories</p></div><Badge>Registry v0.3.0</Badge></div><div className="data-table tagging-table"><div className="table-head"><span>Tag</span><span>Provider / purpose</span><span>Inferred consent categories</span><span>Confidence</span><span>Status</span></div>{tags.map((tag) => <div className="table-row" key={tag.name}><span><strong>{tag.name}</strong></span><span><strong>{tag.provider}</strong><small>{tag.purpose}</small></span><span className="signal-list">{tag.signals.map((signal) => <code key={signal}>{signal}</code>)}</span><span>{tag.confidence}</span><span><Badge tone={tag.status === "Verified" ? "good" : "warn"}>{tag.status}</Badge></span></div>)}</div></section>
-          <section className="dashboard-card consent-reference"><div className="card-heading"><div><h2>Google consent category reference</h2><p>The seven signals available to Meridian classification rules</p></div></div><div className="signal-grid">{consentSignals.map((signal) => <div key={signal}><code>{signal}</code><span>{signal.replaceAll("_", " ")}</span></div>)}</div></section>
-        </>}
+        {view === "tagging" && <GtmTagging propertyName={property} />}
         {view === "analytics" && <>
           <Header eyebrow="Monitoring" title="Analytics" description="Basic consent monitoring and Consent Impact Analytics for the selected property." action={<Badge tone="coming">Coming next</Badge>} />
           <div className="metric-grid"><Metric value="—" label="Consent rate" note="Awaiting collector data" /><Metric value="—" label="Analytics retained" note="Consent impact estimate" /><Metric value="—" label="Ad eligibility" note="Consent impact estimate" /><Metric value="0" label="Implementation alerts" note="No active data source" /></div>
@@ -329,7 +315,7 @@ export default function Home() {
             <div className="section-title"><div><span className="eyebrow">Measurement</span><h2>Google platform</h2><p>Use property-scoped access. Meridian requests only the permissions required for each workflow.</p></div></div>
             <div className="integration-grid google-grid">{[
               { name: "Google Analytics", mark: "GA", description: "Read consent-aware reporting and populate Consent Impact Analytics.", detail: "GA4 property · Reporting access", tone: "orange" },
-              { name: "Google Tag Manager", mark: "GTM", description: "Select containers and manage tag drafts without versioning or publishing access.", detail: "Account User · Container Edit", tone: "blue" },
+              { name: "Google Tag Manager", mark: "GTM", description: "Assess and configure workspace tags, then create validated unpublished versions.", detail: "Container Edit · Version Edit · No Publish", tone: "blue" },
             ].map((service) => { const connected = connectedServices.includes(service.name); const isGtm = service.name === "Google Tag Manager"; return <article className="integration-card" key={service.name}><div className={`integration-mark ${service.tone}`}>{service.mark}</div><div className="integration-card-head"><div><h3>{service.name}</h3><Badge tone={connected ? "good" : "neutral"}>{connected ? "Connected" : "Not connected"}</Badge></div><button className="icon-button">•••</button></div><p>{service.description}</p><div className="integration-meta"><span>{service.detail}</span><strong>{connected ? "Last checked just now" : "OAuth connection required"}</strong></div><button className={connected ? "secondary-button" : "primary-button"} onClick={() => isGtm ? setIntegrationDetail("gtm") : toggleService(service.name)}>{isGtm ? "Configure GTM" : connected ? "Disconnect" : "Connect GA4"}</button></article>; })}</div>
           </section>
           <section className="integration-section storage-section">
@@ -392,18 +378,20 @@ function GtmIntegration({
   onBack: () => void;
   onConnectionChange?: (connected: boolean, notice?: string) => void;
 }) {
-  const requiredScope = "https://www.googleapis.com/auth/tagmanager.edit.containers";
+  const requiredScopes = [
+    "https://www.googleapis.com/auth/tagmanager.edit.containers",
+    "https://www.googleapis.com/auth/tagmanager.edit.containerversions",
+  ];
   const confirmationPhrase = "RUN MERIDIAN GTM TEST";
   const permissionRows = [
     ["GTM account", "User", "Required", "Lists accessible accounts and basic account metadata."],
     ["GTM account", "Administrator", "Not requested", "Would allow container creation and user-permission management."],
     ["Selected container", "Edit", "Required", "Creates, updates, and deletes draft tags in a workspace."],
-    ["Selected container", "Approve", "Not requested", "Can create versions; outside Meridian's draft-only boundary."],
+    ["Selected container", "Approve", "Required", "Allows Meridian to create a validated container version without publishing it."],
     ["Selected container", "Publish", "Not requested", "Can publish versions to environments; explicitly excluded."],
   ];
   const excludedScopes = [
     "tagmanager.publish",
-    "tagmanager.edit.containerversions",
     "tagmanager.delete.containers",
     "tagmanager.manage.users",
     "tagmanager.manage.accounts",
@@ -413,7 +401,7 @@ function GtmIntegration({
     ["02", "Select account and container", "List only resources already visible to the authorized Google user."],
     ["03", "Choose an isolated workspace", "Use Meridian Integration Test so no draft work touches the Default Workspace."],
     ["04", "Probe tag permissions", "List tags, create a clearly labeled test tag, edit it, then delete it."],
-    ["05", "Verify the publish boundary", "Confirm no publish or container-version scope was granted and retain the test audit record."],
+    ["05", "Verify the publish boundary", "Confirm version creation is allowed while publication remains excluded."],
   ];
 
   const onConnectionChangeRef = useRef(onConnectionChange);
@@ -585,7 +573,7 @@ function GtmIntegration({
     <Header
       eyebrow="Google platform"
       title="Google Tag Manager"
-      description="Select authorized containers and manage workspace tag drafts while keeping approval and publishing outside Meridian."
+      description="Manage workspace tag drafts and create validated container versions while keeping publishing outside Meridian."
       action={<button className="primary-button page-action" onClick={() => { location.href = authorizeHref; }}>{connected ? "Reauthorize Google" : "Authorize with Google"}</button>}
     />
     <div className="gtm-boundary">
@@ -673,8 +661,8 @@ function GtmIntegration({
         </div>
       </section>
       <aside className="dashboard-card scope-card">
-        <div className="card-heading"><div><h2>OAuth scope</h2><p>One Google Tag Manager scope</p></div></div>
-        <div className="scope-body"><span>REQUESTED</span><code>{requiredScope}</code><p>This scope covers container components, including tag create, update, and delete operations. Meridian's backend restricts use to the selected account, container, workspace, and supported tag endpoints.</p><span>EXPLICITLY EXCLUDED</span><ul>{excludedScopes.map((scope) => <li key={scope}><code>{scope}</code></li>)}</ul></div>
+        <div className="card-heading"><div><h2>OAuth scopes</h2><p>Two Google Tag Manager scopes</p></div></div>
+        <div className="scope-body"><span>REQUESTED</span>{requiredScopes.map((scope) => <code key={scope}>{scope}</code>)}<p>These scopes cover workspace components and unpublished container-version creation. Meridian's backend exposes no publishing route.</p><span>EXPLICITLY EXCLUDED</span><ul>{excludedScopes.map((scope) => <li key={scope}><code>{scope}</code></li>)}</ul></div>
       </aside>
     </div>
 
@@ -684,7 +672,7 @@ function GtmIntegration({
         <div><Badge tone="good">Allowed</Badge><strong>Discovery</strong><p>List accessible accounts, containers, workspaces, and tags.</p></div>
         <div><Badge tone="good">Allowed</Badge><strong>Draft tag changes</strong><p>Create, retrieve, update, revert, and delete tags in the selected workspace.</p></div>
         <div><Badge tone="warn">Blocked</Badge><strong>Governance changes</strong><p>No user management, account administration, container deletion, or environment changes.</p></div>
-        <div><Badge tone="warn">Blocked</Badge><strong>Release actions</strong><p>No container-version creation, approval, submission, or publishing.</p></div>
+        <div><Badge tone="good">Allowed</Badge><strong>Version handoff</strong><p>Create a validated container version; publishing remains outside Meridian.</p></div>
       </div>
     </section>
 

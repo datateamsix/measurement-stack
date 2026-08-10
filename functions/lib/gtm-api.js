@@ -1,5 +1,5 @@
 import { HttpError } from './http.js';
-import { GTM_EDIT_SCOPE, refreshAccessToken } from './google-oauth.js';
+import { GTM_EDIT_SCOPE, GTM_VERSION_SCOPE, refreshAccessToken } from './google-oauth.js';
 import { connectedToken, updateConnectedToken } from './integration-store.js';
 
 const GTM_API = 'https://tagmanager.googleapis.com/tagmanager/v2';
@@ -40,10 +40,18 @@ export async function authorizedGtmRequest(env, actorKey, path, options = {}, fe
   let token = storedToken;
   if (Number(token.expires_at || 0) <= Date.now() + 60_000) {
     if (!token.refresh_token) throw new HttpError(401, 'The Google connection expired and has no refresh token. Reconnect GTM.');
-    token = await refreshAccessToken(env, token.refresh_token, fetcher);
+    token = await refreshAccessToken(env, token.refresh_token, token.scope, fetcher);
     await updateConnectedToken(env, actorKey, token);
   }
   return gtmFetch(path, token, options, fetcher);
+}
+
+export async function requireGrantedScope(env, actorKey, scope) {
+  const { record } = await connectedToken(env, actorKey);
+  const scopes = new Set(String(record.granted_scope || '').split(/\s+/u).filter(Boolean));
+  if (!scopes.has(scope)) {
+    throw new HttpError(403, 'Reconnect Google Tag Manager to grant unpublished container-version access.');
+  }
 }
 
 async function paginated(env, actorKey, path, property, fetcher = fetch) {
@@ -79,6 +87,19 @@ export function listWorkspaces(env, actorKey, accountId, containerId, fetcher = 
   return paginated(env, actorKey, `${container}/workspaces`, 'workspace', fetcher);
 }
 
+export function createWorkspace(env, actorKey, ids, input, fetcher = fetch) {
+  const { container } = gtmPaths(ids);
+  const name = String(input?.name || '').trim().slice(0, 160);
+  if (!name) throw new HttpError(400, 'Workspace name is required.');
+  return authorizedGtmRequest(env, actorKey, `${container}/workspaces`, {
+    method: 'POST',
+    body: JSON.stringify({
+      name,
+      description: String(input?.description || 'Meridian-managed consent configuration workspace.').trim().slice(0, 500),
+    }),
+  }, fetcher);
+}
+
 export async function listWorkspaceResources(env, actorKey, ids, fetcher = fetch) {
   const { workspace } = gtmPaths(ids);
   const [tags, triggers, variables] = await Promise.all([
@@ -87,6 +108,49 @@ export async function listWorkspaceResources(env, actorKey, ids, fetcher = fetch
     paginated(env, actorKey, `${workspace}/variables`, 'variable', fetcher),
   ]);
   return { tags, triggers, variables };
+}
+
+export async function syncWorkspace(env, actorKey, ids, fetcher = fetch) {
+  const { workspace } = gtmPaths(ids);
+  const result = await authorizedGtmRequest(env, actorKey, `${workspace}:sync`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  }, fetcher);
+  if (result.compilerError) {
+    throw new HttpError(409, 'GTM reports compiler errors in the selected workspace. Resolve them before continuing.');
+  }
+  const conflicts = Array.isArray(result.mergeConflict) ? result.mergeConflict : [];
+  if (conflicts.length) {
+    throw new HttpError(409, `GTM reports ${conflicts.length} workspace merge conflict(s). Resolve them in GTM and reassess before continuing.`);
+  }
+  return result;
+}
+
+export async function updateWorkspaceTag(env, actorKey, tag, fetcher = fetch) {
+  if (!tag?.path || !tag?.fingerprint) throw new HttpError(409, 'The GTM tag is missing its path or fingerprint. Reload the assessment.');
+  return authorizedGtmRequest(
+    env,
+    actorKey,
+    `${tag.path}?fingerprint=${encodeURIComponent(tag.fingerprint)}`,
+    { method: 'PUT', body: JSON.stringify(tag) },
+    fetcher,
+  );
+}
+
+export async function createUnpublishedVersion(env, actorKey, ids, input = {}, fetcher = fetch) {
+  await requireGrantedScope(env, actorKey, GTM_VERSION_SCOPE);
+  const { workspace } = gtmPaths(ids);
+  const name = String(input.name || '').trim().slice(0, 160);
+  if (!name) throw new HttpError(400, 'Version name is required.');
+  const result = await authorizedGtmRequest(env, actorKey, `${workspace}:create_version`, {
+    method: 'POST',
+    body: JSON.stringify({
+      name,
+      notes: String(input.notes || 'Created by Meridian after GTM consent compliance validation. Not published.').trim().slice(0, 1000),
+    }),
+  }, fetcher);
+  if (result.compilerError) throw new HttpError(409, 'GTM could not create the version because the workspace has compiler errors.');
+  return result;
 }
 
 export async function runGtmMutationTest(env, actorKey, ids, fetcher = fetch) {
@@ -144,7 +208,7 @@ export async function runGtmMutationTest(env, actorKey, ids, fetcher = fetch) {
       ok: true,
       scope: GTM_EDIT_SCOPE,
       evidence,
-      blockedByApplication: ['container version creation', 'approval', 'publishing', 'container deletion', 'user management'],
+      blockedByApplication: ['approval', 'publishing', 'container deletion', 'user management'],
       cleanupRequired: false,
     };
   } catch (error) {
